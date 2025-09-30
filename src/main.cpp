@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-#include "constants.h"
+#include "../include/constants.h"
 
 int main() {
     glfwInit();
