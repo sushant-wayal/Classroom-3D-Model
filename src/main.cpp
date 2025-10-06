@@ -4,31 +4,386 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "constants.h"
+#include "shaderClass.h"
+#include "VAO.h"
+#include "VBO.h"
+#include "EBO.h"
+#include "Furniture.h"
 
-int main() {
+// Camera variables - Adjusted for better classroom overview
+glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 15.0f);    // Higher and further back
+glm::vec3 cameraFront = glm::vec3(0.0f, -0.2f, -1.0f); // Slight downward angle
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float yaw = -90.0f;
+float pitch = -10.0f; // Slight downward angle
+float lastX = window::width / 2.0f;
+float lastY = window::height / 2.0f;
+bool firstMouse = true;
+
+// Timing
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+// Lighting - Better positioned for classroom visibility
+glm::vec3 lightPos = glm::vec3(0.0f, 6.0f, 0.0f);
+glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f); // Slightly warm light
+
+void processInput(GLFWwindow *window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    float cameraSpeed = 8.0f * deltaTime; // camera speed
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraUp;
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraUp;
+
+    // Camera preset positions
+    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+    {
+        // Left side view
+        cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
+        cameraFront = glm::vec3(1.0f, 0.0f, 0.0f);
+        yaw = 0.0f;
+        pitch = 0.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+    {
+        // Right side view
+        cameraPos = glm::vec3(10.0f, 3.0f, 2.0f);
+        cameraFront = glm::vec3(-1.0f, 0.0f, 0.0f);
+        yaw = 180.0f;
+        pitch = 0.0f;
+    }
+
+    // Toggle wireframe mode for debugging
+    // static bool wireframeMode = false;
+    // static bool wireframeKeyPressed = false;
+    // if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && !wireframeKeyPressed)
+    // {
+    //     wireframeMode = !wireframeMode;
+    //     wireframeKeyPressed = true;
+    //     if (wireframeMode)
+    //     {
+    //         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //         std::cout << "Wireframe mode ON" << std::endl;
+    //     }
+    //     else
+    //     {
+    //         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //         std::cout << "Wireframe mode OFF" << std::endl;
+    //     }
+    // }
+    // if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE)
+    // {
+    //     wireframeKeyPressed = false;
+    // }
+
+    // Reset camera to left side view (which works well)
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+    {
+        cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
+        cameraFront = glm::vec3(1.0f, 0.0f, 0.0f);
+        yaw = 0.0f;
+        pitch = 0.0f;
+    }
+}
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos)
+{
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+}
+
+int main()
+{
     glfwInit();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(
-        window::width, window::height, window::title, NULL, NULL
-    );
+    GLFWwindow *window = glfwCreateWindow(
+        window::width, window::height, window::title, NULL, NULL);
 
-    if (window == NULL) {
+    if (window == NULL)
+    {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
 
     glfwMakeContextCurrent(window);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    while (!glfwWindowShouldClose(window)) {
+    // Initialize GLEW
+    if (glewInit() != GLEW_OK)
+    {
+        std::cout << "Failed to initialize GLEW" << std::endl;
+        return -1;
+    }
+
+    // Configure global opengl state
+    glEnable(GL_DEPTH_TEST);
+
+    // Classroom dimensions (in meters, scaled for OpenGL)
+    float roomLength = 24.0f;
+    float roomWidth = 16.0f;
+    float roomHeight = 7.0f;
+
+    // Vertices for classroom walls, floor, and ceiling with colors and normals
+    // Format: x, y, z, r, g, b, nx, ny, nz
+    GLfloat vertices[] = {
+        // Floor (y = 0) - Brown color
+        -roomLength / 2, 0.0f, -roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
+        roomLength / 2, 0.0f, -roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
+        roomLength / 2, 0.0f, roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
+        -roomLength / 2, 0.0f, roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
+
+        // Ceiling (y = roomHeight) - Light gray
+        -roomLength / 2, roomHeight, -roomWidth / 2, 0.9f, 0.9f, 0.9f, 0.0f, -1.0f, 0.0f,
+        roomLength / 2, roomHeight, -roomWidth / 2, 0.9f, 0.9f, 0.9f, 0.0f, -1.0f, 0.0f,
+        roomLength / 2, roomHeight, roomWidth / 2, 0.9f, 0.9f, 0.9f, 0.0f, -1.0f, 0.0f,
+        -roomLength / 2, roomHeight, roomWidth / 2, 0.9f, 0.9f, 0.9f, 0.0f, -1.0f, 0.0f,
+
+        // Front wall (z = roomWidth/2) - Light blue
+        -roomLength / 2, 0.0f, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
+        roomLength / 2, 0.0f, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
+        roomLength / 2, roomHeight, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
+        -roomLength / 2, roomHeight, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
+
+        // Back wall (z = -roomWidth/2) - Light green
+        -roomLength / 2, 0.0f, -roomWidth / 2, 0.7f, 1.0f, 0.7f, 0.0f, 0.0f, 1.0f,
+        roomLength / 2, 0.0f, -roomWidth / 2, 0.7f, 1.0f, 0.7f, 0.0f, 0.0f, 1.0f,
+        roomLength / 2, roomHeight, -roomWidth / 2, 0.7f, 1.0f, 0.7f, 0.0f, 0.0f, 1.0f,
+        -roomLength / 2, roomHeight, -roomWidth / 2, 0.7f, 1.0f, 0.7f, 0.0f, 0.0f, 1.0f,
+
+        // Left wall (x = -roomLength/2) - Light yellow
+        -roomLength / 2, 0.0f, -roomWidth / 2, 1.0f, 1.0f, 0.7f, 1.0f, 0.0f, 0.0f,
+        -roomLength / 2, 0.0f, roomWidth / 2, 1.0f, 1.0f, 0.7f, 1.0f, 0.0f, 0.0f,
+        -roomLength / 2, roomHeight, roomWidth / 2, 1.0f, 1.0f, 0.7f, 1.0f, 0.0f, 0.0f,
+        -roomLength / 2, roomHeight, -roomWidth / 2, 1.0f, 1.0f, 0.7f, 1.0f, 0.0f, 0.0f,
+
+        // Right wall (x = roomLength/2) - Light pink
+        roomLength / 2, 0.0f, -roomWidth / 2, 1.0f, 0.8f, 0.9f, -1.0f, 0.0f, 0.0f,
+        roomLength / 2, 0.0f, roomWidth / 2, 1.0f, 0.8f, 0.9f, -1.0f, 0.0f, 0.0f,
+        roomLength / 2, roomHeight, roomWidth / 2, 1.0f, 0.8f, 0.9f, -1.0f, 0.0f, 0.0f,
+        roomLength / 2, roomHeight, -roomWidth / 2, 1.0f, 0.8f, 0.9f, -1.0f, 0.0f, 0.0f};
+
+    GLuint indices[] = {
+        // Floor
+        0, 1, 2, 2, 3, 0,
+        // Ceiling
+        4, 6, 5, 6, 4, 7,
+        // Front wall
+        8, 9, 10, 10, 11, 8,
+        // Back wall
+        12, 14, 13, 14, 12, 15,
+        // Left wall
+        16, 17, 18, 18, 19, 16,
+        // Right wall
+        20, 22, 21, 22, 20, 23};
+
+    // Create shader program for basic room
+    Shader roomShader("shaders/default.vert", "shaders/default.frag");
+
+    // Create shader program for furniture with lighting
+    Shader furnitureShader("shaders/texture.vert", "shaders/texture.frag");
+
+    // Create vertex array and buffers for room
+    VAO roomVAO;
+    roomVAO.Bind();
+
+    VBO roomVBO(vertices, sizeof(vertices));
+    EBO roomEBO(indices, sizeof(indices));
+
+    // Position attribute (location = 0)
+    roomVAO.LinkVBOAttrib(roomVBO, 0, 3, GL_FLOAT, 9 * sizeof(float), (void *)0);
+    // Color attribute (location = 1)
+    roomVAO.LinkVBOAttrib(roomVBO, 1, 3, GL_FLOAT, 9 * sizeof(float), (void *)(3 * sizeof(float)));
+    // Normal attribute (location = 2)
+    roomVAO.LinkVBOAttrib(roomVBO, 2, 3, GL_FLOAT, 9 * sizeof(float), (void *)(6 * sizeof(float)));
+
+    roomVAO.Unbind();
+    roomVBO.Unbind();
+    roomEBO.Unbind();
+
+    // Create furniture pieces with better scaling
+    std::cout << "Creating furniture..." << std::endl;
+
+    // Create desks (3 rows of 4 desks each) - Made larger and more visible
+    std::vector<Furniture> desks;
+    for (int row = 0; row < 3; row++)
+    {
+        for (int col = 0; col < 4; col++)
+        {
+            desks.push_back(Furniture::createDesk(3.0f, 2.0f, 1.5f)); // Increased size significantly
+        }
+    }
+
+    // Create chairs (one for each desk) - Made larger
+    std::vector<Furniture> chairs;
+    for (int i = 0; i < 12; i++)
+    {
+        chairs.push_back(Furniture::createChair(1.0f, 2.5f, 1.0f)); // Increased size
+    }
+
+    // Create podium - Made much larger
+    Furniture podium = Furniture::createPodium(2.5f, 3.0f, 1.8f);
+
+    // Create blackboard - Made larger and more visible
+    Furniture blackboard = Furniture::createBoard(10.0f, 4.0f, 0.3f);
+
+    std::cout << "Furniture created successfully!" << std::endl;
+
+    // Render loop
+    while (!glfwWindowShouldClose(window))
+    {
+        // Per-frame time logic
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        // Input
+        processInput(window);
+
+        // Render
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Create transformations
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f), // Increased FOV from 45 to 60
+                                                (float)window::width / (float)window::height,
+                                                0.1f, 100.0f);
+
+        // Render room (walls, floor, ceiling)
+        roomShader.Activate();
+        glm::mat4 roomModel = glm::mat4(1.0f);
+
+        glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(roomModel));
+        glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+        // Set lighting uniforms for room
+        glUniform3fv(glGetUniformLocation(roomShader.ID, "lightPos"), 1, glm::value_ptr(lightPos));
+        glUniform3fv(glGetUniformLocation(roomShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
+
+        roomVAO.Bind();
+        glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(indices[0]), GL_UNSIGNED_INT, 0);
+
+        // Render furniture with lighting
+        furnitureShader.Activate();
+
+        // Set lighting uniforms
+        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightPos"), 1, glm::value_ptr(lightPos));
+        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
+        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "viewPos"), 1, glm::value_ptr(cameraPos));
+
+        // Render desks in 3 rows - Better positioned and spaced
+        for (int row = 0; row < 3; row++)
+        {
+            for (int col = 0; col < 4; col++)
+            {
+                int index = row * 4 + col;
+                glm::mat4 deskModel = glm::mat4(1.0f);
+
+                // Better positioning for classroom layout
+                float x = -6.0f + col * 4.0f; // Centered better, closer spacing
+                float z = -3.0f + row * 3.5f; // Start closer to camera
+
+                deskModel = glm::translate(deskModel, glm::vec3(x, 0.0f, z));
+                desks[index].Draw(furnitureShader, deskModel, view, projection);
+            }
+        }
+
+        // Render chairs (positioned in front of each desk)
+        for (int row = 0; row < 3; row++)
+        {
+            for (int col = 0; col < 4; col++)
+            {
+                int index = row * 4 + col;
+                glm::mat4 chairModel = glm::mat4(1.0f);
+
+                float x = -6.0f + col * 4.0f;
+                float z = -3.0f + row * 3.5f - 1.2f; // In front of desk
+
+                chairModel = glm::translate(chairModel, glm::vec3(x, 0.0f, z));
+                chairs[index].Draw(furnitureShader, chairModel, view, projection);
+            }
+        }
+
+        // Render podium (at front of class) - Better positioned
+        glm::mat4 podiumModel = glm::mat4(1.0f);
+        podiumModel = glm::translate(podiumModel, glm::vec3(-6.0f, 0.0f, 6.5f));
+        podium.Draw(furnitureShader, podiumModel, view, projection);
+
+        // Render blackboard (on front wall) - Better positioned
+        glm::mat4 boardModel = glm::mat4(1.0f);
+        boardModel = glm::translate(boardModel, glm::vec3(0.0f, 3.5f, 7.9f));
+        blackboard.Draw(furnitureShader, boardModel, view, projection);
+
+        // Swap buffers and poll IO events
+        glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // Clean up
+    roomVAO.Delete();
+    roomVBO.Delete();
+    roomEBO.Delete();
+    roomShader.Delete();
+    furnitureShader.Delete();
+
+    // Clean up furniture
+    for (auto &desk : desks)
+        desk.Delete();
+    for (auto &chair : chairs)
+        chair.Delete();
+    podium.Delete();
+    blackboard.Delete();
 
     glfwDestroyWindow(window);
     glfwTerminate();
