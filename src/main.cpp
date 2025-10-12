@@ -13,6 +13,7 @@
 #include "VBO.h"
 #include "EBO.h"
 #include "Furniture.h"
+#include "models/Model.h" // Include the Model class
 
 // Camera variables - Adjusted for better classroom overview
 glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 15.0f);    // Higher and further back
@@ -71,27 +72,27 @@ void processInput(GLFWwindow *window)
     }
 
     // Toggle wireframe mode for debugging
-    // static bool wireframeMode = false;
-    // static bool wireframeKeyPressed = false;
-    // if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && !wireframeKeyPressed)
-    // {
-    //     wireframeMode = !wireframeMode;
-    //     wireframeKeyPressed = true;
-    //     if (wireframeMode)
-    //     {
-    //         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    //         std::cout << "Wireframe mode ON" << std::endl;
-    //     }
-    //     else
-    //     {
-    //         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    //         std::cout << "Wireframe mode OFF" << std::endl;
-    //     }
-    // }
-    // if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE)
-    // {
-    //     wireframeKeyPressed = false;
-    // }
+    static bool wireframeMode = false;
+    static bool wireframeKeyPressed = false;
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && !wireframeKeyPressed)
+    {
+        wireframeMode = !wireframeMode;
+        wireframeKeyPressed = true;
+        if (wireframeMode)
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            std::cout << "Wireframe mode ON" << std::endl;
+        }
+        else
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            std::cout << "Wireframe mode OFF" << std::endl;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE)
+    {
+        wireframeKeyPressed = false;
+    }
 
     // Reset camera to left side view (which works well)
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
@@ -250,33 +251,20 @@ int main()
     roomVBO.Unbind();
     roomEBO.Unbind();
 
-    // Create furniture pieces with better scaling
-    std::cout << "Creating furniture..." << std::endl;
+    // Create furniture pieces - Now using custom Blender models
+    std::cout << "Loading custom Blender models..." << std::endl;
 
-    // Create desks (3 rows of 4 desks each) - Made larger and more visible
-    std::vector<Furniture> desks;
-    for (int row = 0; row < 3; row++)
-    {
-        for (int col = 0; col < 4; col++)
-        {
-            desks.push_back(Furniture::createDesk(3.0f, 2.0f, 1.5f)); // Increased size significantly
-        }
-    }
+    // Load custom desk model from Blender
+    Model customDesk("models/classroom_desk.obj");
+    std::cout << "Custom desk model loaded successfully!" << std::endl;
 
-    // Create chairs (one for each desk) - Made larger
-    std::vector<Furniture> chairs;
-    for (int i = 0; i < 12; i++)
-    {
-        chairs.push_back(Furniture::createChair(1.0f, 2.5f, 1.0f)); // Increased size
-    }
-
-    // Create podium - Made much larger
+    // Create podium using procedural generation (until you make a Blender model for it)
     Furniture podium = Furniture::createPodium(2.5f, 3.0f, 1.8f);
 
-    // Create blackboard - Made larger and more visible
+    // Create blackboard using procedural generation
     Furniture blackboard = Furniture::createBoard(10.0f, 4.0f, 0.3f);
 
-    std::cout << "Furniture created successfully!" << std::endl;
+    std::cout << "All furniture loaded successfully!" << std::endl;
 
     // Render loop
     while (!glfwWindowShouldClose(window))
@@ -322,45 +310,40 @@ int main()
         glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
         glUniform3fv(glGetUniformLocation(furnitureShader.ID, "viewPos"), 1, glm::value_ptr(cameraPos));
 
-        // Render desks in 3 rows - Better positioned and spaced
+        // Render desks using custom Blender model - 3 rows of 4 desks
+        // Scale factor to make desk proportional to classroom size
+        float deskScale = 0.5f; // Increased from 0.3 to 0.5 for better proportion
+
         for (int row = 0; row < 3; row++)
         {
             for (int col = 0; col < 4; col++)
             {
-                int index = row * 4 + col;
                 glm::mat4 deskModel = glm::mat4(1.0f);
 
-                // Better positioning for classroom layout
-                float x = -6.0f + col * 4.0f; // Centered better, closer spacing
-                float z = -3.0f + row * 3.5f; // Start closer to camera
+                // Position desks with all rows moved one position BACKWARD (more negative z)
+                float x = -7.5f + col * 5.0f; // Wider spacing for larger desks
+                float z = -5.0f + row * 4.0f; // Moved all rows BACK: start at z=-5.0 (was z=-1.0)
+                                              // Row 1: z=-5.0, Row 2: z=-1.0, Row 3: z=3.0
 
+                // Apply transformations in correct order
                 deskModel = glm::translate(deskModel, glm::vec3(x, 0.0f, z));
-                desks[index].Draw(furnitureShader, deskModel, view, projection);
+                deskModel = glm::scale(deskModel, glm::vec3(deskScale, deskScale, deskScale));
+                // Rotate 180 degrees around Y-axis to face the blackboard (front of classroom)
+                deskModel = glm::rotate(deskModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+                customDesk.Draw(furnitureShader, deskModel, view, projection);
             }
         }
 
-        // Render chairs (positioned in front of each desk)
-        for (int row = 0; row < 3; row++)
-        {
-            for (int col = 0; col < 4; col++)
-            {
-                int index = row * 4 + col;
-                glm::mat4 chairModel = glm::mat4(1.0f);
+        // For now, skip chairs until you create a chair model too
+        // You can create a separate chair.obj file and load it similarly
 
-                float x = -6.0f + col * 4.0f;
-                float z = -3.0f + row * 3.5f - 1.2f; // In front of desk
-
-                chairModel = glm::translate(chairModel, glm::vec3(x, 0.0f, z));
-                chairs[index].Draw(furnitureShader, chairModel, view, projection);
-            }
-        }
-
-        // Render podium (at front of class) - Better positioned
+        // Render podium
         glm::mat4 podiumModel = glm::mat4(1.0f);
         podiumModel = glm::translate(podiumModel, glm::vec3(-6.0f, 0.0f, 6.5f));
         podium.Draw(furnitureShader, podiumModel, view, projection);
 
-        // Render blackboard (on front wall) - Better positioned
+        // Render blackboard
         glm::mat4 boardModel = glm::mat4(1.0f);
         boardModel = glm::translate(boardModel, glm::vec3(0.0f, 3.5f, 7.9f));
         blackboard.Draw(furnitureShader, boardModel, view, projection);
@@ -378,10 +361,7 @@ int main()
     furnitureShader.Delete();
 
     // Clean up furniture
-    for (auto &desk : desks)
-        desk.Delete();
-    for (auto &chair : chairs)
-        chair.Delete();
+    customDesk.Delete();
     podium.Delete();
     blackboard.Delete();
 
