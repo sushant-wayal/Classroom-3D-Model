@@ -21,7 +21,6 @@ g++ -o main src/main.cpp \
     src/utils/VBO.cpp \
     src/utils/VAO.cpp \
     src/utils/EBO.cpp \
-    src/utils/Furniture.cpp \
     src/utils/Texture.cpp \
     src/models/Model.cpp \
     -Iinclude \
