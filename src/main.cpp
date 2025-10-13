@@ -13,12 +13,13 @@
 #include "VBO.h"
 #include "EBO.h"
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 15.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, -0.2f, -1.0f);
+// Camera variables - position
+glm::vec3 cameraPos = glm::vec3(0.0f, 2.5f, -4.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-float yaw = -90.0f;
-float pitch = -10.0f;
+float yaw = 90.0f;
+float pitch = 0.0f;
 float lastX = window::width / 2.0f;
 float lastY = window::height / 2.0f;
 bool firstMouse = true;
@@ -51,7 +52,7 @@ void processInput(GLFWwindow *window)
         cameraPos -= cameraSpeed * cameraUp;
 
     // Camera preset positions
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
     {
         // Left side view
         cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
@@ -59,7 +60,7 @@ void processInput(GLFWwindow *window)
         yaw = 0.0f;
         pitch = 0.0f;
     }
-    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
     {
         // Right side view
         cameraPos = glm::vec3(10.0f, 3.0f, 2.0f);
@@ -68,12 +69,12 @@ void processInput(GLFWwindow *window)
         pitch = 0.0f;
     }
 
-    // Reset camera to left side view (which works well)
+    // Reset camera
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
     {
-        cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
-        cameraFront = glm::vec3(1.0f, 0.0f, 0.0f);
-        yaw = 0.0f;
+        cameraPos = glm::vec3(0.0f, 2.5f, -4.0f);
+        cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);
+        yaw = 90.0f;
         pitch = 0.0f;
     }
 }
@@ -232,7 +233,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        glm::mat4 projection = glm::perspective(glm::radians(60.0f), // Increased FOV from 45 to 60
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f),
                                                 (float)window::width / (float)window::height,
                                                 0.1f, 100.0f);
 
