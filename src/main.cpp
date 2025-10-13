@@ -13,7 +13,7 @@
 #include "VBO.h"
 #include "EBO.h"
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 15.0f);    
+glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 15.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, -0.2f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -27,9 +27,9 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// Lighting 
+// Lighting
 glm::vec3 lightPos = glm::vec3(0.0f, 6.0f, 0.0f);
-glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f); 
+glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f);
 
 void processInput(GLFWwindow *window)
 {
@@ -203,9 +203,6 @@ int main()
     // Create shader program for basic room
     Shader roomShader("shaders/default.vert", "shaders/default.frag");
 
-    // Create shader program for furniture with lighting
-    Shader furnitureShader("shaders/texture.vert", "shaders/texture.frag");
-
     // Create vertex array and buffers for room
     VAO roomVAO;
     roomVAO.Bind();
@@ -220,7 +217,6 @@ int main()
     roomVAO.Unbind();
     roomVBO.Unbind();
     roomEBO.Unbind();
-
 
     // Render loop
     while (!glfwWindowShouldClose(window))
@@ -240,7 +236,7 @@ int main()
                                                 (float)window::width / (float)window::height,
                                                 0.1f, 100.0f);
 
-        // Render room 
+        // Render room
         roomShader.Activate();
         glm::mat4 roomModel = glm::mat4(1.0f);
 
@@ -264,8 +260,6 @@ int main()
     roomVBO.Delete();
     roomEBO.Delete();
     roomShader.Delete();
-    furnitureShader.Delete();
-
 
     glfwDestroyWindow(window);
     glfwTerminate();
