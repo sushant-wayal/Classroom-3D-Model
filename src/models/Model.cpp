@@ -1,6 +1,21 @@
 #include "models/Model.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
+#include <map>
+
+// Comparison struct for glm::vec3 to use in std::map
+struct CompareVec3
+{
+    bool operator()(const glm::vec3 &a, const glm::vec3 &b) const
+    {
+        const float epsilon = 0.0001f;
+        if (std::abs(a.x - b.x) > epsilon)
+            return a.x < b.x;
+        if (std::abs(a.y - b.y) > epsilon)
+            return a.y < b.y;
+        return a.z < b.z;
+    }
+};
 
 Model::Model(const char *objFile)
 {
@@ -20,6 +35,9 @@ void Model::loadOBJ(const char *objFile)
     std::vector<glm::vec3> temp_vertices;
     std::vector<glm::vec2> temp_uvs;
     std::vector<glm::vec3> temp_normals;
+
+    // Use a map to avoid duplicate vertices and enable proper normal interpolation
+    std::map<std::string, unsigned int> vertexMap;
 
     std::string line;
     while (std::getline(file, line))
@@ -48,39 +66,121 @@ void Model::loadOBJ(const char *objFile)
         }
         else if (prefix == "f")
         {
-            std::string vertex1, vertex2, vertex3;
-            iss >> vertex1 >> vertex2 >> vertex3;
-
-            // Parse face indices (format: v/vt/vn)
-            for (const std::string &vertexStr : {vertex1, vertex2, vertex3})
+            // Read all vertices in the face (could be triangle or quad)
+            std::vector<std::string> faceVertices;
+            std::string vertexStr;
+            while (iss >> vertexStr)
             {
-                std::string mutableVertexStr = vertexStr;
-                std::replace(mutableVertexStr.begin(), mutableVertexStr.end(), '/', ' ');
-                std::istringstream vertexStream(mutableVertexStr);
+                faceVertices.push_back(vertexStr);
+            }
 
-                unsigned int vertexIndex, uvIndex, normalIndex;
-                vertexStream >> vertexIndex >> uvIndex >> normalIndex;
+            // Handle both triangles (3 vertices) and quads (4 vertices)
+            if (faceVertices.size() == 3)
+            {
+                // Triangle - process normally
+                for (const std::string &vertexStr : faceVertices)
+                {
+                    processVertex(vertexStr, temp_vertices, temp_uvs, temp_normals, vertexMap);
+                }
+            }
+            else if (faceVertices.size() == 4)
+            {
+                // Quad - triangulate into 2 triangles
+                // Triangle 1: vertices 0, 1, 2
+                processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                processVertex(faceVertices[1], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                processVertex(faceVertices[2], temp_vertices, temp_uvs, temp_normals, vertexMap);
 
-                // OBJ indices are 1-based, convert to 0-based
-                vertexIndex--;
-                uvIndex--;
-                normalIndex--;
-
-                Vertex vertex;
-                if (vertexIndex < temp_vertices.size())
-                    vertex.Position = temp_vertices[vertexIndex];
-                if (uvIndex < temp_uvs.size())
-                    vertex.TexCoords = temp_uvs[uvIndex];
-                if (normalIndex < temp_normals.size())
-                    vertex.Normal = temp_normals[normalIndex];
-
-                vertices.push_back(vertex);
-                indices.push_back(vertices.size() - 1);
+                // Triangle 2: vertices 0, 2, 3
+                processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                processVertex(faceVertices[2], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                processVertex(faceVertices[3], temp_vertices, temp_uvs, temp_normals, vertexMap);
+            }
+            else if (faceVertices.size() > 4)
+            {
+                // N-gon - triangulate using fan triangulation
+                for (size_t i = 1; i < faceVertices.size() - 1; i++)
+                {
+                    processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                    processVertex(faceVertices[i], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                    processVertex(faceVertices[i + 1], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                }
             }
         }
     }
 
     file.close();
+
+    // Generate smooth normals only if needed
+    bool needsNormalGeneration = temp_normals.empty();
+    if (!needsNormalGeneration)
+    {
+        // Check if any normals are zero (indicating missing normals)
+        for (const auto &vertex : vertices)
+        {
+            if (glm::length(vertex.Normal) < 0.1f)
+            {
+                needsNormalGeneration = true;
+                break;
+            }
+        }
+    }
+
+    if (needsNormalGeneration)
+    {
+        std::cout << "Generating smooth normals for model: " << objFile << std::endl;
+        generateSmoothNormals();
+    }
+
+    std::cout << "Loaded model: " << objFile << " with " << vertices.size()
+              << " vertices and " << indices.size() / 3 << " faces" << std::endl;
+}
+
+void Model::generateSmoothNormals()
+{
+    // Reset all normals to zero
+    for (auto &vertex : vertices)
+    {
+        vertex.Normal = glm::vec3(0.0f);
+    }
+
+    // Calculate face normals and add them to vertex normals
+    for (size_t i = 0; i < indices.size(); i += 3)
+    {
+        unsigned int i0 = indices[i];
+        unsigned int i1 = indices[i + 1];
+        unsigned int i2 = indices[i + 2];
+
+        if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size())
+            continue;
+
+        glm::vec3 v0 = vertices[i0].Position;
+        glm::vec3 v1 = vertices[i1].Position;
+        glm::vec3 v2 = vertices[i2].Position;
+
+        // Calculate face normal
+        glm::vec3 edge1 = v1 - v0;
+        glm::vec3 edge2 = v2 - v0;
+        glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
+        // Add face normal to each vertex of the triangle
+        vertices[i0].Normal += faceNormal;
+        vertices[i1].Normal += faceNormal;
+        vertices[i2].Normal += faceNormal;
+    }
+
+    // Normalize all vertex normals
+    for (auto &vertex : vertices)
+    {
+        if (glm::length(vertex.Normal) > 0.0f)
+        {
+            vertex.Normal = glm::normalize(vertex.Normal);
+        }
+        else
+        {
+            vertex.Normal = glm::vec3(0.0f, 1.0f, 0.0f); // Default upward normal
+        }
+    }
 }
 
 void Model::setupModel()
@@ -128,5 +228,52 @@ void Model::Delete()
     {
         modelEBO->Delete();
         delete modelEBO;
+    }
+}
+
+void Model::processVertex(const std::string &vertexStr, const std::vector<glm::vec3> &temp_vertices, const std::vector<glm::vec2> &temp_uvs, const std::vector<glm::vec3> &temp_normals, std::map<std::string, unsigned int> &vertexMap)
+{
+    // Check if we've already processed this exact vertex combination
+    auto it = vertexMap.find(vertexStr);
+    if (it != vertexMap.end())
+    {
+        // Reuse existing vertex
+        indices.push_back(it->second);
+    }
+    else
+    {
+        // Create new vertex
+        std::string mutableVertexStr = vertexStr;
+        std::replace(mutableVertexStr.begin(), mutableVertexStr.end(), '/', ' ');
+        std::istringstream vertexStream(mutableVertexStr);
+
+        unsigned int vertexIndex, uvIndex, normalIndex;
+        vertexStream >> vertexIndex >> uvIndex >> normalIndex;
+
+        // OBJ indices are 1-based, convert to 0-based
+        vertexIndex--;
+        uvIndex--;
+        normalIndex--;
+
+        Vertex vertex;
+        if (vertexIndex < temp_vertices.size())
+            vertex.Position = temp_vertices[vertexIndex];
+        else
+            vertex.Position = glm::vec3(0.0f);
+
+        if (uvIndex < temp_uvs.size())
+            vertex.TexCoords = temp_uvs[uvIndex];
+        else
+            vertex.TexCoords = glm::vec2(0.0f);
+
+        if (normalIndex < temp_normals.size())
+            vertex.Normal = glm::normalize(temp_normals[normalIndex]);
+        else
+            vertex.Normal = glm::vec3(0.0f, 1.0f, 0.0f); // Default normal
+
+        vertices.push_back(vertex);
+        unsigned int newIndex = vertices.size() - 1;
+        vertexMap[vertexStr] = newIndex;
+        indices.push_back(newIndex);
     }
 }

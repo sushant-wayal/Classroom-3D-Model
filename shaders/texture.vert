@@ -14,7 +14,11 @@ out vec2 TexCoord;
 void main()
 {
     FragPos = vec3(model * vec4(aPos, 1.0));
-    Normal = mat3(transpose(inverse(model))) * aNormal;
+    
+    // Properly transform normals using the normal matrix
+    // This is crucial for maintaining smooth lighting during rotations
+    Normal = normalize(mat3(transpose(inverse(model))) * aNormal);
+    
     TexCoord = aTexCoord;
     
     gl_Position = projection * view * vec4(FragPos, 1.0);

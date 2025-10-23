@@ -145,6 +145,9 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    // Keep only essential anti-aliasing for smooth edges
+    glfwWindowHint(GLFW_SAMPLES, 4); // Reduced from 8 to 4 for better compatibility
+
     GLFWwindow *window = glfwCreateWindow(
         window::width, window::height, window::title, NULL, NULL);
 
@@ -166,13 +169,16 @@ int main()
         return -1;
     }
 
-    // Configure global opengl state
+    // Configure global opengl state - back to simple settings
     glEnable(GL_DEPTH_TEST);
 
+    // Enable multisampling for smoother edges
+    glEnable(GL_MULTISAMPLE);
+
     // Classroom dimensions (in meters, scaled for OpenGL)
-    float roomLength = 24.0f;
-    float roomWidth = 16.0f;
-    float roomHeight = 7.0f;
+    float roomLength = room::length;
+    float roomWidth = room::width;
+    float roomHeight = room::height;
 
     // Vertices for classroom walls, floor, and ceiling with colors and normals
     // Format: x, y, z, r, g, b, nx, ny, nz
@@ -258,6 +264,9 @@ int main()
     Model customDesk("models/classroom_desk.obj");
     std::cout << "Custom desk model loaded successfully!" << std::endl;
 
+    Model customFan("models/classroom_fan.obj");
+    std::cout << "Custom Fan Model loaded successfully!" << std::endl;
+
     // Create podium using procedural generation (until you make a Blender model for it)
     Furniture podium = Furniture::createPodium(2.5f, 3.0f, 1.8f);
 
@@ -312,11 +321,16 @@ int main()
 
         // Render desks using custom Blender model - 3 rows of 4 desks
         // Scale factor to make desk proportional to classroom size
-        float deskScale = 0.5f; // Increased from 0.3 to 0.5 for better proportion
+        float deskScale = furniture::deskScale; // Increased from 0.3 to 0.5 for better proportion
 
-        for (int row = 0; row < 3; row++)
+        int noOfRows = furniture::rows;
+        int noOfCols = furniture::cols;
+
+        float deskYPos = 0.0f;
+
+        for (int row = 0; row < noOfRows; row++)
         {
-            for (int col = 0; col < 4; col++)
+            for (int col = 0; col < noOfCols; col++)
             {
                 glm::mat4 deskModel = glm::mat4(1.0f);
 
@@ -326,13 +340,40 @@ int main()
                                               // Row 1: z=-5.0, Row 2: z=-1.0, Row 3: z=3.0
 
                 // Apply transformations in correct order
-                deskModel = glm::translate(deskModel, glm::vec3(x, 0.0f, z));
+                deskModel = glm::translate(deskModel, glm::vec3(x, deskYPos, z));
                 deskModel = glm::scale(deskModel, glm::vec3(deskScale, deskScale, deskScale));
                 // Rotate 180 degrees around Y-axis to face the blackboard (front of classroom)
                 deskModel = glm::rotate(deskModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
                 customDesk.Draw(furnitureShader, deskModel, view, projection);
             }
+        }
+
+        float fanScale = furniture::fanScale;
+
+        int noOfFans = furniture::fans;
+
+        float fanYPos = roomHeight - 1.2f;
+        float fanZPos = 0.0f;
+
+        float distanceBetween = 9.0f;
+
+        // Add fan rotation for more realistic appearance
+        float fanRotationSpeed = 2.0f; // Set to 0 to stop rotation and focus on smoothness
+        float fanRotation = fmod(currentFrame * fanRotationSpeed * 360.0f, 360.0f);
+
+        for (int fan = 0; fan < noOfFans; fan++)
+        {
+            glm::mat4 fanModel = glm::mat4(1.0f);
+
+            float x = ((roomLength - distanceBetween) / 2) - (roomLength / 2) + fan * distanceBetween;
+
+            fanModel = glm::translate(fanModel, glm::vec3(x, fanYPos, fanZPos));
+            fanModel = glm::scale(fanModel, glm::vec3(fanScale, fanScale, fanScale));
+            // Add rotation around Y-axis (vertical) for fan blades
+            fanModel = glm::rotate(fanModel, glm::radians(fanRotation), glm::vec3(0.0f, 1.0f, 0.0f));
+
+            customFan.Draw(furnitureShader, fanModel, view, projection);
         }
 
         // For now, skip chairs until you create a chair model too
@@ -362,6 +403,7 @@ int main()
 
     // Clean up furniture
     customDesk.Delete();
+    customFan.Delete();
     podium.Delete();
     blackboard.Delete();
 

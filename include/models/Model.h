@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <map>
 
 #include "VAO.h"
 #include "VBO.h"
@@ -41,6 +42,8 @@ private:
 
     void loadOBJ(const char *objFile);
     void setupModel();
+    void generateSmoothNormals();
+    void processVertex(const std::string &vertexStr, const std::vector<glm::vec3> &temp_vertices, const std::vector<glm::vec2> &temp_uvs, const std::vector<glm::vec3> &temp_normals, std::map<std::string, unsigned int> &vertexMap);
 };
 
 #endif
