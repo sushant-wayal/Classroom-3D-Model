@@ -54,7 +54,7 @@ void processInput(GLFWwindow *window)
         cameraPos -= cameraSpeed * cameraUp;
 
     // Camera preset positions
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
     {
         // Left side view
         cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
@@ -62,36 +62,13 @@ void processInput(GLFWwindow *window)
         yaw = 0.0f;
         pitch = 0.0f;
     }
-    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
     {
         // Right side view
         cameraPos = glm::vec3(10.0f, 3.0f, 2.0f);
         cameraFront = glm::vec3(-1.0f, 0.0f, 0.0f);
         yaw = 180.0f;
         pitch = 0.0f;
-    }
-
-    // Toggle wireframe mode for debugging
-    static bool wireframeMode = false;
-    static bool wireframeKeyPressed = false;
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && !wireframeKeyPressed)
-    {
-        wireframeMode = !wireframeMode;
-        wireframeKeyPressed = true;
-        if (wireframeMode)
-        {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            std::cout << "Wireframe mode ON" << std::endl;
-        }
-        else
-        {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            std::cout << "Wireframe mode OFF" << std::endl;
-        }
-    }
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE)
-    {
-        wireframeKeyPressed = false;
     }
 
     // Reset camera to left side view (which works well)
