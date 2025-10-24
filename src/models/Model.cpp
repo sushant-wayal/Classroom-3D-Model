@@ -19,8 +19,26 @@ struct CompareVec3
 
 Model::Model(const char *objFile)
 {
+    texture = nullptr;
     loadOBJ(objFile);
     setupModel();
+}
+
+Model::Model(const char *objFile, const char *texturePath)
+{
+    texture = new Texture(texturePath);
+    loadOBJ(objFile);
+    setupModel();
+}
+
+void Model::SetTexture(const char *texturePath)
+{
+    if (texture != nullptr)
+    {
+        texture->Delete();
+        delete texture;
+    }
+    texture = new Texture(texturePath);
 }
 
 void Model::loadOBJ(const char *objFile)
@@ -190,11 +208,11 @@ void Model::setupModel()
     modelVBO = new VBO((GLfloat *)vertices.data(), vertices.size() * sizeof(Vertex));
     modelEBO = new EBO(indices.data(), indices.size() * sizeof(unsigned int));
 
-    // Position attribute
+    // Position attribute (location = 0)
     modelVAO.LinkVBOAttrib(*modelVBO, 0, 3, GL_FLOAT, sizeof(Vertex), (void *)0);
-    // Normal attribute
+    // Normal attribute (location = 1)
     modelVAO.LinkVBOAttrib(*modelVBO, 1, 3, GL_FLOAT, sizeof(Vertex), (void *)(offsetof(Vertex, Normal)));
-    // Texture coordinate attribute
+    // Texture coordinate attribute (location = 2)
     modelVAO.LinkVBOAttrib(*modelVBO, 2, 2, GL_FLOAT, sizeof(Vertex), (void *)(offsetof(Vertex, TexCoords)));
 
     modelVAO.Unbind();
@@ -211,9 +229,27 @@ void Model::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 proj
     glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
+    // Bind texture if available
+    if (texture != nullptr)
+    {
+        glActiveTexture(GL_TEXTURE0);
+        texture->Bind();
+        texture->texUnit(shader.ID, "tex0", 0);
+        glUniform1i(glGetUniformLocation(shader.ID, "hasTexture"), 1);
+    }
+    else
+    {
+        glUniform1i(glGetUniformLocation(shader.ID, "hasTexture"), 0);
+    }
+
     modelVAO.Bind();
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
     modelVAO.Unbind();
+
+    if (texture != nullptr)
+    {
+        texture->Unbind();
+    }
 }
 
 void Model::Delete()
@@ -228,6 +264,12 @@ void Model::Delete()
     {
         modelEBO->Delete();
         delete modelEBO;
+    }
+    if (texture)
+    {
+        texture->Delete();
+        delete texture;
+        texture = nullptr;
     }
 }
 

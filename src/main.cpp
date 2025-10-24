@@ -257,21 +257,15 @@ int main()
     roomVBO.Unbind();
     roomEBO.Unbind();
 
-    // Create furniture pieces - Now using custom Blender models
+    // Create furniture pieces - Simple texture application
     std::cout << "Loading custom Blender models..." << std::endl;
 
-    // Load custom desk model from Blender
-    Model customDesk("models/classroom_desk.obj");
-    std::cout << "Custom desk model loaded successfully!" << std::endl;
+    // Load custom desk model with simple texture application
+    Model customDesk("models/classroom_desk.obj", "textures/desk_texture.jpeg");
+    std::cout << "Custom desk model loaded with wood texture applied to entire model!" << std::endl;
 
     Model customFan("models/classroom_fan.obj");
     std::cout << "Custom Fan Model loaded successfully!" << std::endl;
-
-    // Create podium using procedural generation (until you make a Blender model for it)
-    Furniture podium = Furniture::createPodium(2.5f, 3.0f, 1.8f);
-
-    // Create blackboard using procedural generation
-    Furniture blackboard = Furniture::createBoard(10.0f, 4.0f, 0.3f);
 
     std::cout << "All furniture loaded successfully!" << std::endl;
 
@@ -376,19 +370,6 @@ int main()
             customFan.Draw(furnitureShader, fanModel, view, projection);
         }
 
-        // For now, skip chairs until you create a chair model too
-        // You can create a separate chair.obj file and load it similarly
-
-        // Render podium
-        glm::mat4 podiumModel = glm::mat4(1.0f);
-        podiumModel = glm::translate(podiumModel, glm::vec3(-6.0f, 0.0f, 6.5f));
-        podium.Draw(furnitureShader, podiumModel, view, projection);
-
-        // Render blackboard
-        glm::mat4 boardModel = glm::mat4(1.0f);
-        boardModel = glm::translate(boardModel, glm::vec3(0.0f, 3.5f, 7.9f));
-        blackboard.Draw(furnitureShader, boardModel, view, projection);
-
         // Swap buffers and poll IO events
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -404,8 +385,6 @@ int main()
     // Clean up furniture
     customDesk.Delete();
     customFan.Delete();
-    podium.Delete();
-    blackboard.Delete();
 
     glfwDestroyWindow(window);
     glfwTerminate();

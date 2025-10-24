@@ -8,27 +8,34 @@ out vec4 FragColor;
 uniform vec3 lightPos;
 uniform vec3 lightColor;
 uniform vec3 viewPos;
+uniform sampler2D tex0;
+uniform int hasTexture;
 
 void main()
 {
     vec3 objectColor;
     
-    // Determine object color based on position and type
-    if (FragPos.z > 7.0) {
-        // Blackboard - bright green
-        objectColor = vec3(0.0f, 0.6f, 0.0f);
-    } else if (FragPos.y > 4.0) {
-        // Fan and ceiling objects - metallic gray
-        objectColor = vec3(0.7f, 0.7f, 0.8f);
-    } else if (FragPos.y > 1.8) {
-        // Desk tops and chair backs - medium brown
-        objectColor = vec3(0.8f, 0.6f, 0.4f);
-    } else if (FragPos.y > 0.5) {
-        // Chair seats - lighter brown
-        objectColor = vec3(0.9f, 0.7f, 0.5f);
+    // Simple texture application - use texture if available, otherwise fallback colors
+    if (hasTexture == 1) {
+        objectColor = texture(tex0, TexCoord).rgb;
     } else {
-        // Legs and lower parts - dark brown
-        objectColor = vec3(0.5f, 0.3f, 0.2f);
+        // Determine object color based on position and type
+        if (FragPos.z > 7.0) {
+            // Blackboard - bright green
+            objectColor = vec3(0.0f, 0.6f, 0.0f);
+        } else if (FragPos.y > 4.0) {
+            // Fan and ceiling objects - metallic gray
+            objectColor = vec3(0.7f, 0.7f, 0.8f);
+        } else if (FragPos.y > 1.8) {
+            // Desk tops and chair backs - medium brown
+            objectColor = vec3(0.8f, 0.6f, 0.4f);
+        } else if (FragPos.y > 0.5) {
+            // Chair seats - lighter brown
+            objectColor = vec3(0.9f, 0.7f, 0.5f);
+        } else {
+            // Legs and lower parts - dark brown
+            objectColor = vec3(0.5f, 0.3f, 0.2f);
+        }
     }
     
     // Enhanced lighting for better visibility and smoothness

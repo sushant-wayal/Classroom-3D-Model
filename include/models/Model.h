@@ -30,11 +30,14 @@ public:
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     VAO modelVAO;
+    Texture *texture;
 
     Model(const char *objFile);
+    Model(const char *objFile, const char *texturePath);
 
     void Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection);
     void Delete();
+    void SetTexture(const char *texturePath);
 
 private:
     VBO *modelVBO;
