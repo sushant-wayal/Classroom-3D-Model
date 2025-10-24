@@ -15,13 +15,13 @@
 #include "Furniture.h"
 #include "models/Model.h" // Include the Model class
 
-// Camera variables - Adjusted for better classroom overview
-glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 15.0f);    // Higher and further back
-glm::vec3 cameraFront = glm::vec3(0.0f, -0.2f, -1.0f); // Slight downward angle
+// Camera variables - Set to camera angle 1 (left side view) as default
+glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f); // Left side view position
+glm::vec3 cameraFront = glm::vec3(1.0f, 0.0f, 0.0f); // Looking right towards the classroom
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-float yaw = -90.0f;
-float pitch = -10.0f; // Slight downward angle
+float yaw = 0.0f;   // Facing right (positive X direction)
+float pitch = 0.0f; // Level horizon
 float lastX = window::width / 2.0f;
 float lastY = window::height / 2.0f;
 bool firstMouse = true;
