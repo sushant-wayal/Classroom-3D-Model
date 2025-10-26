@@ -34,6 +34,8 @@ float lastFrame = 0.0f;
 glm::vec3 lightPos = glm::vec3(0.0f, 6.0f, 0.0f);
 glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f); // Slightly warm light
 
+float fanRotationSpeed[furniture::fans];
+
 void processInput(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -78,6 +80,26 @@ void processInput(GLFWwindow *window)
         cameraFront = glm::vec3(1.0f, 0.0f, 0.0f);
         yaw = 0.0f;
         pitch = 0.0f;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS)
+    {
+        fanRotationSpeed[0] = 2.0f; // Resume rotation
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS)
+    {
+        fanRotationSpeed[1] = 2.0f; // Resume rotation
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS)
+    {
+        fanRotationSpeed[0] = 0.0f; // Stop rotation
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS)
+    {
+        fanRotationSpeed[1] = 0.0f; // Stop rotation
     }
 }
 
@@ -151,6 +173,10 @@ int main()
 
     // Enable multisampling for smoother edges
     glEnable(GL_MULTISAMPLE);
+
+    for (int i = 0; i < furniture::fans; i++) {
+        fanRotationSpeed[i] = 2.0f; // Set to 0 to stop rotation and focus on smoothness
+    }
 
     // Classroom dimensions (in meters, scaled for OpenGL)
     float roomLength = room::length;
@@ -330,8 +356,11 @@ int main()
         float distanceBetween = 9.0f;
 
         // Add fan rotation for more realistic appearance
-        float fanRotationSpeed = 2.0f; // Set to 0 to stop rotation and focus on smoothness
-        float fanRotation = fmod(currentFrame * fanRotationSpeed * 360.0f, 360.0f);
+         // Set to 0 to stop rotation and focus on smoothness
+        float fanRotation[noOfFans];
+        for (int i = 0; i < noOfFans; i++) {
+            fanRotation[i] = fmod(glfwGetTime() * fanRotationSpeed[i] * 360.0f + i * 45.0f, 360.0f);
+        }
 
         for (int fan = 0; fan < noOfFans; fan++)
         {
@@ -342,7 +371,7 @@ int main()
             fanModel = glm::translate(fanModel, glm::vec3(x, fanYPos, fanZPos));
             fanModel = glm::scale(fanModel, glm::vec3(fanScale, fanScale, fanScale));
             // Add rotation around Y-axis (vertical) for fan blades
-            fanModel = glm::rotate(fanModel, glm::radians(fanRotation), glm::vec3(0.0f, 1.0f, 0.0f));
+            fanModel = glm::rotate(fanModel, glm::radians(fanRotation[fan]), glm::vec3(0.0f, 1.0f, 0.0f));
 
             customFan.Draw(furnitureShader, fanModel, view, projection);
         }
