@@ -129,76 +129,8 @@ void Model::loadOBJ(const char *objFile)
 
     file.close();
 
-    // Generate smooth normals only if needed
-    bool needsNormalGeneration = temp_normals.empty();
-    if (!needsNormalGeneration)
-    {
-        // Check if any normals are zero (indicating missing normals)
-        for (const auto &vertex : vertices)
-        {
-            if (glm::length(vertex.Normal) < 0.1f)
-            {
-                needsNormalGeneration = true;
-                break;
-            }
-        }
-    }
-
-    if (needsNormalGeneration)
-    {
-        std::cout << "Generating smooth normals for model: " << objFile << std::endl;
-        generateSmoothNormals();
-    }
-
     std::cout << "Loaded model: " << objFile << " with " << vertices.size()
               << " vertices and " << indices.size() / 3 << " faces" << std::endl;
-}
-
-void Model::generateSmoothNormals()
-{
-    // Reset all normals to zero
-    for (auto &vertex : vertices)
-    {
-        vertex.Normal = glm::vec3(0.0f);
-    }
-
-    // Calculate face normals and add them to vertex normals
-    for (size_t i = 0; i < indices.size(); i += 3)
-    {
-        unsigned int i0 = indices[i];
-        unsigned int i1 = indices[i + 1];
-        unsigned int i2 = indices[i + 2];
-
-        if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size())
-            continue;
-
-        glm::vec3 v0 = vertices[i0].Position;
-        glm::vec3 v1 = vertices[i1].Position;
-        glm::vec3 v2 = vertices[i2].Position;
-
-        // Calculate face normal
-        glm::vec3 edge1 = v1 - v0;
-        glm::vec3 edge2 = v2 - v0;
-        glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
-
-        // Add face normal to each vertex of the triangle
-        vertices[i0].Normal += faceNormal;
-        vertices[i1].Normal += faceNormal;
-        vertices[i2].Normal += faceNormal;
-    }
-
-    // Normalize all vertex normals
-    for (auto &vertex : vertices)
-    {
-        if (glm::length(vertex.Normal) > 0.0f)
-        {
-            vertex.Normal = glm::normalize(vertex.Normal);
-        }
-        else
-        {
-            vertex.Normal = glm::vec3(0.0f, 1.0f, 0.0f); // Default upward normal
-        }
-    }
 }
 
 void Model::setupModel()

@@ -60,11 +60,6 @@ void main()
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     vec3 specular = specularStrength * spec * lightColor;
     
-    // Add subtle additional lighting from below to reduce harsh shadows
-    vec3 bottomLightDir = normalize(vec3(0.0, 1.0, 0.0));
-    float bottomDiff = max(dot(norm, bottomLightDir), 0.0);
-    vec3 fillLight = bottomDiff * lightColor * 0.2;
-    
-    vec3 result = (ambient + diffuse + specular + fillLight) * objectColor;
+    vec3 result = (ambient + diffuse + specular) * objectColor;
     FragColor = vec4(result, 1.0);
 }

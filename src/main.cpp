@@ -13,9 +13,9 @@
 #include "VBO.h"
 #include "EBO.h"
 #include "Furniture.h"
-#include "models/Model.h" // Include the Model class
+#include "models/Model.h"
 
-// Camera variables - Set to camera angle 1 (left side view) as default
+
 glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f); // Left side view position
 glm::vec3 cameraFront = glm::vec3(1.0f, 0.0f, 0.0f); // Looking right towards the classroom
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -30,9 +30,9 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// Lighting - Better positioned for classroom visibility
+// Lighting 
 glm::vec3 lightPos = glm::vec3(0.0f, 6.0f, 0.0f);
-glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f); // Slightly warm light
+glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f);
 
 float fanRotationSpeed[furniture::fans];
 
@@ -145,7 +145,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Keep only essential anti-aliasing for smooth edges
-    glfwWindowHint(GLFW_SAMPLES, 4); // Reduced from 8 to 4 for better compatibility
+    glfwWindowHint(GLFW_SAMPLES, 4);
 
     GLFWwindow *window = glfwCreateWindow(
         window::width, window::height, window::title, NULL, NULL);
@@ -168,14 +168,12 @@ int main()
         return -1;
     }
 
-    // Configure global opengl state - back to simple settings
     glEnable(GL_DEPTH_TEST);
 
-    // Enable multisampling for smoother edges
     glEnable(GL_MULTISAMPLE);
 
     for (int i = 0; i < furniture::fans; i++) {
-        fanRotationSpeed[i] = 2.0f; // Set to 0 to stop rotation and focus on smoothness
+        fanRotationSpeed[i] = 2.0f;
     }
 
     // Classroom dimensions (in meters, scaled for OpenGL)
@@ -289,7 +287,7 @@ int main()
 
         // Create transformations
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        glm::mat4 projection = glm::perspective(glm::radians(60.0f), // Increased FOV from 45 to 60
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f),
                                                 (float)window::width / (float)window::height,
                                                 0.1f, 100.0f);
 
@@ -316,10 +314,8 @@ int main()
         glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
         glUniform3fv(glGetUniformLocation(furnitureShader.ID, "viewPos"), 1, glm::value_ptr(cameraPos));
 
-        // Render desks using custom Blender model - 3 rows of 4 desks
         // Scale factor to make desk proportional to classroom size
-        float deskScale = furniture::deskScale; // Increased from 0.3 to 0.5 for better proportion
-
+        float deskScale = furniture::deskScale;
         int noOfRows = furniture::rows;
         int noOfCols = furniture::cols;
 
@@ -331,12 +327,9 @@ int main()
             {
                 glm::mat4 deskModel = glm::mat4(1.0f);
 
-                // Position desks with all rows moved one position BACKWARD (more negative z)
-                float x = -7.5f + col * 5.0f; // Wider spacing for larger desks
-                float z = -5.0f + row * 4.0f; // Moved all rows BACK: start at z=-5.0 (was z=-1.0)
-                                              // Row 1: z=-5.0, Row 2: z=-1.0, Row 3: z=3.0
+                float x = -7.5f + col * 5.0f; 
+                float z = -5.0f + row * 4.0f; 
 
-                // Apply transformations in correct order
                 deskModel = glm::translate(deskModel, glm::vec3(x, deskYPos, z));
                 deskModel = glm::scale(deskModel, glm::vec3(deskScale, deskScale, deskScale));
                 // Rotate 180 degrees around Y-axis to face the blackboard (front of classroom)
@@ -355,8 +348,6 @@ int main()
 
         float distanceBetween = 9.0f;
 
-        // Add fan rotation for more realistic appearance
-         // Set to 0 to stop rotation and focus on smoothness
         float fanRotation[noOfFans];
         for (int i = 0; i < noOfFans; i++) {
             fanRotation[i] = fmod(glfwGetTime() * fanRotationSpeed[i] * 360.0f + i * 45.0f, 360.0f);
