@@ -13,8 +13,8 @@
 #include "VBO.h"
 #include "EBO.h"
 #include "Furniture.h"
+#include "CeilingTiles.h"
 #include "models/Model.h"
-
 
 glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f); // Left side view position
 glm::vec3 cameraFront = glm::vec3(1.0f, 0.0f, 0.0f); // Looking right towards the classroom
@@ -30,7 +30,7 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// Lighting 
+// Lighting
 glm::vec3 lightPos = glm::vec3(0.0f, 6.0f, 0.0f);
 glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f);
 
@@ -172,7 +172,8 @@ int main()
 
     glEnable(GL_MULTISAMPLE);
 
-    for (int i = 0; i < furniture::fans; i++) {
+    for (int i = 0; i < furniture::fans; i++)
+    {
         fanRotationSpeed[i] = 2.0f;
     }
 
@@ -189,12 +190,6 @@ int main()
         roomLength / 2, 0.0f, -roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
         roomLength / 2, 0.0f, roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
         -roomLength / 2, 0.0f, roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
-
-        // Ceiling (y = roomHeight) - Light gray
-        -roomLength / 2, roomHeight, -roomWidth / 2, 0.9f, 0.9f, 0.9f, 0.0f, -1.0f, 0.0f,
-        roomLength / 2, roomHeight, -roomWidth / 2, 0.9f, 0.9f, 0.9f, 0.0f, -1.0f, 0.0f,
-        roomLength / 2, roomHeight, roomWidth / 2, 0.9f, 0.9f, 0.9f, 0.0f, -1.0f, 0.0f,
-        -roomLength / 2, roomHeight, roomWidth / 2, 0.9f, 0.9f, 0.9f, 0.0f, -1.0f, 0.0f,
 
         // Front wall (z = roomWidth/2) - Light blue
         -roomLength / 2, 0.0f, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
@@ -223,15 +218,14 @@ int main()
     GLuint indices[] = {
         // Floor
         0, 1, 2, 2, 3, 0,
-        // Ceiling
-        4, 6, 5, 6, 4, 7,
         // Front wall
-        8, 9, 10, 10, 11, 8,
+        4, 6, 5, 6, 4, 7,
         // Back wall
-        12, 14, 13, 14, 12, 15,
+        8, 9, 10, 10, 11, 8,
         // Left wall
-        16, 17, 18, 18, 19, 16,
+        12, 14, 13, 14, 12, 15,
         // Right wall
+        16, 17, 18, 18, 19, 16,
         20, 22, 21, 22, 20, 23};
 
     // Create shader program for basic room
@@ -267,6 +261,11 @@ int main()
 
     Model customFan("models/classroom_fan.obj");
     std::cout << "Custom Fan Model loaded successfully!" << std::endl;
+
+    // Create realistic tiled ceiling with 10 rows and 15 columns
+    std::cout << "Creating tiled ceiling..." << std::endl;
+    CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15);
+    std::cout << "Tiled ceiling created successfully!" << std::endl;
 
     std::cout << "All furniture loaded successfully!" << std::endl;
 
@@ -306,6 +305,9 @@ int main()
         roomVAO.Bind();
         glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(indices[0]), GL_UNSIGNED_INT, 0);
 
+        // Render tiled ceiling
+        ceilingTiles.Draw(roomShader, roomModel, view, projection);
+
         // Render furniture with lighting
         furnitureShader.Activate();
 
@@ -327,8 +329,8 @@ int main()
             {
                 glm::mat4 deskModel = glm::mat4(1.0f);
 
-                float x = -7.5f + col * 5.0f; 
-                float z = -5.0f + row * 4.0f; 
+                float x = -7.5f + col * 5.0f;
+                float z = -5.0f + row * 4.0f;
 
                 deskModel = glm::translate(deskModel, glm::vec3(x, deskYPos, z));
                 deskModel = glm::scale(deskModel, glm::vec3(deskScale, deskScale, deskScale));
@@ -349,7 +351,8 @@ int main()
         float distanceBetween = 9.0f;
 
         float fanRotation[noOfFans];
-        for (int i = 0; i < noOfFans; i++) {
+        for (int i = 0; i < noOfFans; i++)
+        {
             fanRotation[i] = fmod(glfwGetTime() * fanRotationSpeed[i] * 360.0f + i * 45.0f, 360.0f);
         }
 
@@ -382,6 +385,7 @@ int main()
     // Clean up furniture
     customDesk.Delete();
     customFan.Delete();
+    ceilingTiles.Delete();
 
     glfwDestroyWindow(window);
     glfwTerminate();

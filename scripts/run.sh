@@ -23,6 +23,7 @@ g++ -o main src/main.cpp \
     src/utils/EBO.cpp \
     src/utils/Furniture.cpp \
     src/utils/Texture.cpp \
+    src/utils/CeilingTiles.cpp \
     src/models/Model.cpp \
     -Iinclude \
     -lglfw \
