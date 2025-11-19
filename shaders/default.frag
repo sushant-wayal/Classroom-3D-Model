@@ -2,6 +2,7 @@
 in vec3 vertexColor;
 in vec3 Normal;
 in vec3 FragPos;
+in float vertexAlpha;  // Receive alpha from vertex shader
 
 out vec4 FragColor;
 
@@ -74,5 +75,5 @@ void main()
    // Subtle gamma correction for natural appearance
    result = pow(result, vec3(1.0/2.2));
    
-   FragColor = vec4(result, 1.0f);
+   FragColor = vec4(result, vertexAlpha); // Use vertex alpha for transparency
 }

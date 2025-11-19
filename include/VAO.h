@@ -6,19 +6,21 @@
 #include <glm/glm.hpp>
 #include "VBO.h"
 
-class VAO {
-    public:
-        GLuint ID;
+class VAO
+{
+public:
+    GLuint ID;
 
-        VAO();
+    VAO();
 
-        void LinkVBOAttrib(VBO& VBO, GLuint layout, GLuint numComponents, GLenum type, GLsizeiptr stride, void* offset);
+    void LinkVBOAttrib(VBO &VBO, GLuint layout, GLuint numComponents, GLenum type, GLsizeiptr stride, void *offset);
+    void LinkAttribWithAlpha(VBO &VBO);
 
-        void Bind();
+    void Bind();
 
-        void Unbind();
+    void Unbind();
 
-        void Delete();
+    void Delete();
 };
 
 #endif

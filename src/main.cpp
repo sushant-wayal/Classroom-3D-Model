@@ -14,6 +14,8 @@
 #include "EBO.h"
 #include "Furniture.h"
 #include "CeilingTiles.h"
+#include "Windows.h"
+#include "RightWallWindows.h"
 #include "models/Model.h"
 
 glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f); // Left side view position
@@ -182,6 +184,96 @@ int main()
     float roomWidth = room::width;
     float roomHeight = room::height;
 
+    // Calculate window parameters - MUST MATCH Windows.cpp exactly
+    float frameThicknessCalc = 0.05f;            // 5cm frame thickness (THINNER!)
+    float windowHeightCalc = roomHeight * 0.20f; // 20% height - SHORTER
+    float topMargin = 0.30f;                     // 30cm from ceiling (REDUCED from 60cm)
+    float windowTopY = roomHeight - topMargin;
+    float windowBottomY = windowTopY - windowHeightCalc;
+
+    float sideMargin = frameThicknessCalc + 0.05f; // 10cm margin on each side (frames stay inside)
+    float spacingBetweenWindows = 0.50f;           // 50cm gap between windows
+    float totalAvailableLength = roomLength - (2.0f * sideMargin);
+    float totalSpacing = spacingBetweenWindows * (8 - 1); // 8 windows
+    float windowWidthCalc = (totalAvailableLength - totalSpacing) / 8;
+    float startX = -roomLength / 2.0f + sideMargin;
+
+    // Create back wall vertices with 8 INDIVIDUAL window holes
+    std::vector<GLfloat> backWallVertices;
+    std::vector<GLuint> backWallIndices;
+
+    float backWallZ = -roomWidth / 2.0f;
+    float leftWallX = -roomLength / 2.0f;
+    float rightWallX = roomLength / 2.0f;
+
+    // Colors for wall
+    float wallR = 0.95f, wallG = 0.90f, wallB = 0.70f;
+
+    unsigned int vertexIndex = 0;
+
+    // Bottom section (floor to window bottom) - SOLID WALL
+    backWallVertices.insert(backWallVertices.end(), {leftWallX, 0.0f, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                     rightWallX, 0.0f, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                     rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                     leftWallX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
+    backWallIndices.insert(backWallIndices.end(), {0, 1, 2, 2, 3, 0});
+    vertexIndex = 4;
+
+    // Top section (window top to ceiling) - SOLID WALL
+    backWallVertices.insert(backWallVertices.end(), {leftWallX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                     rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                     rightWallX, roomHeight, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                     leftWallX, roomHeight, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
+    backWallIndices.insert(backWallIndices.end(), {vertexIndex + 0, vertexIndex + 1, vertexIndex + 2,
+                                                   vertexIndex + 2, vertexIndex + 3, vertexIndex + 0});
+    vertexIndex += 4;
+
+    // Middle section - wall with 8 INDIVIDUAL window holes
+    // Create wall sections between and around windows
+    for (int i = 0; i < 8; i++)
+    {
+        float windowLeftX = startX + i * (windowWidthCalc + spacingBetweenWindows);
+        float windowRightX = windowLeftX + windowWidthCalc;
+
+        if (i == 0)
+        {
+            // Left edge wall section (from left wall to first window)
+            backWallVertices.insert(backWallVertices.end(), {leftWallX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             windowLeftX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             windowLeftX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             leftWallX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
+            backWallIndices.insert(backWallIndices.end(), {vertexIndex + 0, vertexIndex + 1, vertexIndex + 2,
+                                                           vertexIndex + 2, vertexIndex + 3, vertexIndex + 0});
+            vertexIndex += 4;
+        }
+
+        if (i < 7)
+        {
+            // Wall section BETWEEN this window and next window
+            float nextWindowLeftX = startX + (i + 1) * (windowWidthCalc + spacingBetweenWindows);
+
+            backWallVertices.insert(backWallVertices.end(), {windowRightX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             nextWindowLeftX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             nextWindowLeftX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             windowRightX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
+            backWallIndices.insert(backWallIndices.end(), {vertexIndex + 0, vertexIndex + 1, vertexIndex + 2,
+                                                           vertexIndex + 2, vertexIndex + 3, vertexIndex + 0});
+            vertexIndex += 4;
+        }
+
+        if (i == 7)
+        {
+            // Right edge wall section (from last window to right wall)
+            backWallVertices.insert(backWallVertices.end(), {windowRightX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
+                                                             windowRightX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
+            backWallIndices.insert(backWallIndices.end(), {vertexIndex + 0, vertexIndex + 1, vertexIndex + 2,
+                                                           vertexIndex + 2, vertexIndex + 3, vertexIndex + 0});
+            vertexIndex += 4;
+        }
+    }
+
     // Vertices for classroom walls, floor, and ceiling with colors and normals
     // Format: x, y, z, r, g, b, nx, ny, nz
     GLfloat vertices[] = {
@@ -191,42 +283,26 @@ int main()
         roomLength / 2, 0.0f, roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
         -roomLength / 2, 0.0f, roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
 
-        // Front wall (z = roomWidth/2) - More yellow painted wall for clear distinction
+        // Front wall (z = roomWidth/2)
         -roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
         roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
         roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
         -roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
 
-        // Back wall (z = -roomWidth/2) - More yellow painted wall
-        -roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, 1.0f,
-        roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, 1.0f,
-        roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, 1.0f,
-        -roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, 1.0f,
-
-        // Left wall (x = -roomLength/2) - More yellow painted wall
+        // Left wall (x = -roomLength/2)
         -roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
         -roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
         -roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
-        -roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
-
-        // Right wall (x = roomLength/2) - More yellow painted wall
-        roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, -1.0f, 0.0f, 0.0f,
-        roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, -1.0f, 0.0f, 0.0f,
-        roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, -1.0f, 0.0f, 0.0f,
-        roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, -1.0f, 0.0f, 0.0f};
+        -roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f};
 
     GLuint indices[] = {
         // Floor
         0, 1, 2, 2, 3, 0,
         // Front wall
         4, 6, 5, 6, 4, 7,
-        // Back wall
-        8, 9, 10, 10, 11, 8,
         // Left wall
-        12, 14, 13, 14, 12, 15,
-        // Right wall
-        16, 17, 18, 18, 19, 16,
-        20, 22, 21, 22, 20, 23};
+        8, 10, 9, 10, 8, 11};
+    // Right wall REMOVED - created separately with window holes
 
     // Create shader program for basic room
     Shader roomShader("shaders/default.vert", "shaders/default.frag");
@@ -234,23 +310,149 @@ int main()
     // Create shader program for furniture with lighting
     Shader furnitureShader("shaders/texture.vert", "shaders/texture.frag");
 
-    // Create vertex array and buffers for room
+    // Create vertex array and buffers for room (floor and side walls)
     VAO roomVAO;
     roomVAO.Bind();
 
     VBO roomVBO(vertices, sizeof(vertices));
     EBO roomEBO(indices, sizeof(indices));
 
-    // Position attribute (location = 0)
     roomVAO.LinkVBOAttrib(roomVBO, 0, 3, GL_FLOAT, 9 * sizeof(float), (void *)0);
-    // Color attribute (location = 1)
     roomVAO.LinkVBOAttrib(roomVBO, 1, 3, GL_FLOAT, 9 * sizeof(float), (void *)(3 * sizeof(float)));
-    // Normal attribute (location = 2)
     roomVAO.LinkVBOAttrib(roomVBO, 2, 3, GL_FLOAT, 9 * sizeof(float), (void *)(6 * sizeof(float)));
 
     roomVAO.Unbind();
     roomVBO.Unbind();
     roomEBO.Unbind();
+
+    // Create VAO/VBO/EBO for back wall with 8 individual holes
+    VAO backWallVAO;
+    backWallVAO.Bind();
+
+    VBO backWallVBO(backWallVertices.data(), backWallVertices.size() * sizeof(GLfloat));
+    EBO backWallEBO(backWallIndices.data(), backWallIndices.size() * sizeof(GLuint));
+
+    backWallVAO.LinkVBOAttrib(backWallVBO, 0, 3, GL_FLOAT, 9 * sizeof(float), (void *)0);
+    backWallVAO.LinkVBOAttrib(backWallVBO, 1, 3, GL_FLOAT, 9 * sizeof(float), (void *)(3 * sizeof(float)));
+    backWallVAO.LinkVBOAttrib(backWallVBO, 2, 3, GL_FLOAT, 9 * sizeof(float), (void *)(6 * sizeof(float)));
+
+    backWallVAO.Unbind();
+    backWallVBO.Unbind();
+    backWallEBO.Unbind();
+
+    // Create right wall vertices with 6 INDIVIDUAL window holes (5 back + 1 front)
+    std::vector<GLfloat> rightWallVertices;
+    std::vector<GLuint> rightWallIndices;
+
+    unsigned int rightVertexIndex = 0;
+    float frontWallZ = roomWidth / 2.0f;
+
+    // Right wall window parameters - same as back wall
+    float rightWindowWidth = windowWidthCalc; // Same width as back wall windows (2.7875m)
+    float backMarginRight = 0.5f;
+    float frontMarginRight = 0.5f;
+
+    // BACK SECTION: 5 windows
+    int numBackWindows = 5;
+    float backSectionStart = backWallZ + backMarginRight;
+    float backSectionLength = numBackWindows * rightWindowWidth + (numBackWindows - 1) * spacingBetweenWindows;
+
+    // FRONT SECTION: 1 window (CHANGED from 2 to 1)
+    int numFrontWindows = 1;
+    float frontSectionEnd = frontWallZ - frontMarginRight;
+    float frontSectionLength = numFrontWindows * rightWindowWidth; // No spacing needed for single window
+    float frontSectionStart = frontSectionEnd - frontSectionLength;
+
+    // Bottom section (floor to window bottom) - SOLID WALL
+    rightWallVertices.insert(rightWallVertices.end(), {rightWallX, 0.0f, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, 0.0f, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowBottomY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
+    rightWallIndices.insert(rightWallIndices.end(), {0, 1, 2, 2, 3, 0});
+    rightVertexIndex = 4;
+
+    // Top section (window top to ceiling) - SOLID WALL
+    rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowTopY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, roomHeight, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, roomHeight, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
+    rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
+                                                     rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
+    rightVertexIndex += 4;
+
+    // Middle section - wall with 6 INDIVIDUAL window holes in 2 sections
+    // BACK SECTION: Create wall sections for 5 windows
+    for (int i = 0; i < numBackWindows; i++)
+    {
+        float windowBackZ = backSectionStart + i * (rightWindowWidth + spacingBetweenWindows);
+        float windowFrontZ = windowBackZ + rightWindowWidth;
+
+        if (i == 0)
+        {
+            // Back edge wall section (from back wall to first window)
+            rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowBottomY, windowBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowTopY, windowBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
+            rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
+                                                             rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
+            rightVertexIndex += 4;
+        }
+
+        if (i < numBackWindows - 1)
+        {
+            // Wall section BETWEEN this window and next window in back section
+            float nextWindowBackZ = backSectionStart + (i + 1) * (rightWindowWidth + spacingBetweenWindows);
+
+            rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowBottomY, nextWindowBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowTopY, nextWindowBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowTopY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
+            rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
+                                                             rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
+            rightVertexIndex += 4;
+        }
+
+        if (i == numBackWindows - 1)
+        {
+            // Large GAP section between back section and front section
+            rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowBottomY, frontSectionStart, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowTopY, frontSectionStart, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                               rightWallX, windowTopY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
+            rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
+                                                             rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
+            rightVertexIndex += 4;
+        }
+    }
+
+    // FRONT SECTION: Create wall section for 1 window
+    // Front edge wall section (from last window to front wall)
+    float windowBackZ = frontSectionStart;
+    float windowFrontZ = windowBackZ + rightWindowWidth;
+
+    rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowBottomY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowTopY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowTopY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
+    rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
+                                                     rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
+    rightVertexIndex += 4;
+
+    // Create VAO/VBO/EBO for right wall with 6 individual holes
+    VAO rightWallVAO;
+    rightWallVAO.Bind();
+
+    VBO rightWallVBO(rightWallVertices.data(), rightWallVertices.size() * sizeof(GLfloat));
+    EBO rightWallEBO(rightWallIndices.data(), rightWallIndices.size() * sizeof(GLuint));
+
+    rightWallVAO.LinkVBOAttrib(rightWallVBO, 0, 3, GL_FLOAT, 9 * sizeof(float), (void *)0);
+    rightWallVAO.LinkVBOAttrib(rightWallVBO, 1, 3, GL_FLOAT, 9 * sizeof(float), (void *)(3 * sizeof(float)));
+    rightWallVAO.LinkVBOAttrib(rightWallVBO, 2, 3, GL_FLOAT, 9 * sizeof(float), (void *)(6 * sizeof(float)));
+
+    rightWallVAO.Unbind();
+    rightWallVBO.Unbind();
+    rightWallEBO.Unbind();
 
     // Create furniture pieces - Simple texture application
     std::cout << "Loading custom Blender models..." << std::endl;
@@ -267,6 +469,16 @@ int main()
     CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15); // 10 rows x 15 columns with larger tiles for 32m x 21.5m room
     std::cout << "Tiled ceiling created successfully!" << std::endl;
 
+    // Create windows on back wall with transparent glass and white plastic frames
+    std::cout << "Creating back wall windows..." << std::endl;
+    Windows backWallWindows(roomLength, roomWidth, roomHeight, 8); // 8 windows on back wall
+    std::cout << "Back wall windows created successfully!" << std::endl;
+
+    // Create windows on right wall with 6 windows (5 back + 1 front sections)
+    std::cout << "Creating right wall windows..." << std::endl;
+    RightWallWindows rightWallWindows(roomLength, roomWidth, roomHeight); // 6 windows on right wall
+    std::cout << "Right wall windows created successfully!" << std::endl;
+
     std::cout << "All furniture loaded successfully!" << std::endl;
 
     // Render loop
@@ -280,8 +492,8 @@ int main()
         // Input
         processInput(window);
 
-        // Render
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        // Render - Sky blue background (visible through transparent windows)
+        glClearColor(0.53f, 0.81f, 0.98f, 1.0f); // Beautiful light sky blue color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Create transformations
@@ -305,8 +517,22 @@ int main()
         roomVAO.Bind();
         glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(indices[0]), GL_UNSIGNED_INT, 0);
 
+        // Render back wall with 8 individual holes
+        backWallVAO.Bind();
+        glDrawElements(GL_TRIANGLES, backWallIndices.size(), GL_UNSIGNED_INT, 0);
+
+        // Render right wall with 6 individual holes (5 back + 1 front)
+        rightWallVAO.Bind();
+        glDrawElements(GL_TRIANGLES, rightWallIndices.size(), GL_UNSIGNED_INT, 0);
+
         // Render tiled ceiling
         ceilingTiles.Draw(roomShader, roomModel, view, projection);
+
+        // Render back wall windows with transparent glass and white frames
+        backWallWindows.Draw(roomShader, roomModel, view, projection);
+
+        // Render right wall windows with transparent glass and white frames
+        rightWallWindows.Draw(roomShader, roomModel, view, projection);
 
         // Render furniture with lighting
         furnitureShader.Activate();
@@ -442,6 +668,12 @@ int main()
     roomVAO.Delete();
     roomVBO.Delete();
     roomEBO.Delete();
+    backWallVAO.Delete();
+    backWallVBO.Delete();
+    backWallEBO.Delete();
+    rightWallVAO.Delete();
+    rightWallVBO.Delete();
+    rightWallEBO.Delete();
     roomShader.Delete();
     furnitureShader.Delete();
 
@@ -449,6 +681,8 @@ int main()
     customDesk.Delete();
     customFan.Delete();
     ceilingTiles.Delete();
+    backWallWindows.Delete();
+    rightWallWindows.Delete();
 
     glfwDestroyWindow(window);
     glfwTerminate();
