@@ -20,10 +20,7 @@ void main()
         objectColor = texture(tex0, TexCoord).rgb;
     } else {
         // Determine object color based on position and type
-        if (FragPos.z > 7.0) {
-            // Blackboard - bright green
-            objectColor = vec3(0.0f, 0.6f, 0.0f);
-        } else if (FragPos.y > 4.0) {
+        if (FragPos.y > 4.0) {
             // Fan and ceiling objects - metallic gray
             objectColor = vec3(0.7f, 0.7f, 0.8f);
         } else if (FragPos.y > 1.8) {

@@ -185,35 +185,35 @@ int main()
     // Vertices for classroom walls, floor, and ceiling with colors and normals
     // Format: x, y, z, r, g, b, nx, ny, nz
     GLfloat vertices[] = {
-        // Floor (y = 0) - Brown color
-        -roomLength / 2, 0.0f, -roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
-        roomLength / 2, 0.0f, -roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
-        roomLength / 2, 0.0f, roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
-        -roomLength / 2, 0.0f, roomWidth / 2, 0.6f, 0.4f, 0.2f, 0.0f, 1.0f, 0.0f,
+        // Floor (y = 0) - Shiny white tile
+        -roomLength / 2, 0.0f, -roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
+        roomLength / 2, 0.0f, -roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
+        roomLength / 2, 0.0f, roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
+        -roomLength / 2, 0.0f, roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
 
-        // Front wall (z = roomWidth/2) - Light blue
-        -roomLength / 2, 0.0f, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
-        roomLength / 2, 0.0f, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
-        roomLength / 2, roomHeight, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
-        -roomLength / 2, roomHeight, roomWidth / 2, 0.7f, 0.8f, 1.0f, 0.0f, 0.0f, -1.0f,
+        // Front wall (z = roomWidth/2) - More yellow painted wall for clear distinction
+        -roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
+        roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
+        roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
+        -roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
 
-        // Back wall (z = -roomWidth/2) - Light green
-        -roomLength / 2, 0.0f, -roomWidth / 2, 0.7f, 1.0f, 0.7f, 0.0f, 0.0f, 1.0f,
-        roomLength / 2, 0.0f, -roomWidth / 2, 0.7f, 1.0f, 0.7f, 0.0f, 0.0f, 1.0f,
-        roomLength / 2, roomHeight, -roomWidth / 2, 0.7f, 1.0f, 0.7f, 0.0f, 0.0f, 1.0f,
-        -roomLength / 2, roomHeight, -roomWidth / 2, 0.7f, 1.0f, 0.7f, 0.0f, 0.0f, 1.0f,
+        // Back wall (z = -roomWidth/2) - More yellow painted wall
+        -roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, 1.0f,
+        roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, 1.0f,
+        roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, 1.0f,
+        -roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, 1.0f,
 
-        // Left wall (x = -roomLength/2) - Light yellow
-        -roomLength / 2, 0.0f, -roomWidth / 2, 1.0f, 1.0f, 0.7f, 1.0f, 0.0f, 0.0f,
-        -roomLength / 2, 0.0f, roomWidth / 2, 1.0f, 1.0f, 0.7f, 1.0f, 0.0f, 0.0f,
-        -roomLength / 2, roomHeight, roomWidth / 2, 1.0f, 1.0f, 0.7f, 1.0f, 0.0f, 0.0f,
-        -roomLength / 2, roomHeight, -roomWidth / 2, 1.0f, 1.0f, 0.7f, 1.0f, 0.0f, 0.0f,
+        // Left wall (x = -roomLength/2) - More yellow painted wall
+        -roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
+        -roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
+        -roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
+        -roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
 
-        // Right wall (x = roomLength/2) - Light pink
-        roomLength / 2, 0.0f, -roomWidth / 2, 1.0f, 0.8f, 0.9f, -1.0f, 0.0f, 0.0f,
-        roomLength / 2, 0.0f, roomWidth / 2, 1.0f, 0.8f, 0.9f, -1.0f, 0.0f, 0.0f,
-        roomLength / 2, roomHeight, roomWidth / 2, 1.0f, 0.8f, 0.9f, -1.0f, 0.0f, 0.0f,
-        roomLength / 2, roomHeight, -roomWidth / 2, 1.0f, 0.8f, 0.9f, -1.0f, 0.0f, 0.0f};
+        // Right wall (x = roomLength/2) - More yellow painted wall
+        roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, -1.0f, 0.0f, 0.0f,
+        roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, -1.0f, 0.0f, 0.0f,
+        roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, -1.0f, 0.0f, 0.0f,
+        roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, -1.0f, 0.0f, 0.0f};
 
     GLuint indices[] = {
         // Floor
@@ -262,9 +262,9 @@ int main()
     Model customFan("models/classroom_fan.obj");
     std::cout << "Custom Fan Model loaded successfully!" << std::endl;
 
-    // Create realistic tiled ceiling with 10 rows and 15 columns
+    // Create realistic tiled ceiling with adjusted dimensions for classroom
     std::cout << "Creating tiled ceiling..." << std::endl;
-    CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15);
+    CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15); // 10 rows x 15 columns with larger tiles for 32m x 21.5m room
     std::cout << "Tiled ceiling created successfully!" << std::endl;
 
     std::cout << "All furniture loaded successfully!" << std::endl;
@@ -323,14 +323,44 @@ int main()
 
         float deskYPos = 0.0f;
 
+        // FIXED spacing between benches - NO OVERLAP!
+        // Each scaled bench is approximately 1.8m wide and 1.6m deep (seat + backrest = 2m total)
+        float spacingBetweenCols = 5.0f; // SIGNIFICANTLY INCREASED to 5.0m spacing between column centers (MAXIMUM SEPARATION!)
+        float spacingBetweenRows = 3.5f; // Fixed 3.5m spacing between row centers (PERFECT - DO NOT CHANGE!)
+
+        // Actual bench dimensions (after scaling)
+        float benchWidth = 1.8f; // Actual width of each bench
+
+        // Calculate total space needed for benches
+        float totalBenchWidth = (noOfCols - 1) * spacingBetweenCols;
+        float totalBenchDepth = (noOfRows - 1) * spacingBetweenRows;
+
+        // Calculate total width occupied including the actual physical extent of benches
+        // The grid spans from leftmost bench edge to rightmost bench edge
+        float totalOccupiedWidth = totalBenchWidth + benchWidth;
+
+        // Back margin from back wall (extra space for backrest of last row)
+        float backMargin = 2.5f; // 2.5m to ensure backrests don't clip through wall
+
+        // Calculate starting positions to center benches with equal side spacing
+        // Z-axis: Start from back, leaving back margin, benches go towards front
+        float startZ = -roomWidth / 2 + backMargin;
+
+        // X-axis: Center the benches horizontally with equal side space
+        // Total occupied width includes spacing between benches PLUS the physical width of benches
+        float totalGridWidth = (noOfCols - 1) * spacingBetweenCols + benchWidth;
+        float sideSpace = (roomLength - totalGridWidth) / 2.0f;
+        // Start at left wall + side space + half bench width (since benches are placed at their centers)
+        float startX = -roomLength / 2 + sideSpace + (benchWidth / 2.0f);
+
         for (int row = 0; row < noOfRows; row++)
         {
             for (int col = 0; col < noOfCols; col++)
             {
                 glm::mat4 deskModel = glm::mat4(1.0f);
 
-                float x = -7.5f + col * 5.0f;
-                float z = -5.0f + row * 4.0f;
+                float x = startX + col * spacingBetweenCols;
+                float z = startZ + row * spacingBetweenRows;
 
                 deskModel = glm::translate(deskModel, glm::vec3(x, deskYPos, z));
                 deskModel = glm::scale(deskModel, glm::vec3(deskScale, deskScale, deskScale));
@@ -341,14 +371,41 @@ int main()
             }
         }
 
-        float fanScale = furniture::fanScale;
+        // Debug output to verify layout
+        if (glfwGetTime() < 1.0f)
+        { // Print once at startup
+            std::cout << "\n=== BENCH LAYOUT DEBUG ===" << std::endl;
+            std::cout << "Room Width (Z-axis): " << roomWidth << "m" << std::endl;
+            std::cout << "Back margin (for backrest): " << backMargin << "m" << std::endl;
+            std::cout << "ROW SPACING: " << spacingBetweenRows << "m (PERFECT - DO NOT CHANGE!)" << std::endl;
+            std::cout << "COLUMN SPACING: " << spacingBetweenCols << "m (SIGNIFICANTLY INCREASED!)" << std::endl;
+            std::cout << "Total bench grid width: " << totalBenchWidth << "m" << std::endl;
+            std::cout << "Total bench grid depth: " << totalBenchDepth << "m" << std::endl;
+            std::cout << "Benches start X: " << startX << "m (leftmost)" << std::endl;
+            std::cout << "Benches end X: " << (startX + totalBenchWidth) << "m (rightmost)" << std::endl;
+            std::cout << "Left wall at X: " << (-roomLength / 2) << "m" << std::endl;
+            std::cout << "Right wall at X: " << (roomLength / 2) << "m" << std::endl;
+            std::cout << "Benches start Z: " << startZ << "m" << std::endl;
+            std::cout << "Benches end Z (last row center): " << (startZ + totalBenchDepth) << "m" << std::endl;
+            std::cout << "Back wall at Z: " << (-roomWidth / 2) << "m" << std::endl;
+            std::cout << "Front wall at Z: " << (roomWidth / 2) << "m" << std::endl;
+            std::cout << "Front space: " << (roomWidth / 2 - (startZ + totalBenchDepth) - 1.0f) << "m" << std::endl;
+            std::cout << "========================\n"
+                      << std::endl;
+        }
 
+        float fanScale = furniture::fanScale;
         int noOfFans = furniture::fans;
+        int fanRows = furniture::fanRows;
+        int fanCols = furniture::fanCols;
 
         float fanYPos = roomHeight - 1.2f;
-        float fanZPos = 0.0f;
 
-        float distanceBetween = 9.0f;
+        // Calculate spacing for 2x3 fan grid
+        float fanSpacingX = roomLength * 0.7f / (fanCols - 1); // Use 70% of room length
+        float fanSpacingZ = roomWidth * 0.6f / (fanRows - 1);  // Use 60% of room width
+        float fanStartX = -(roomLength * 0.35f);               // Center the grid
+        float fanStartZ = -(roomWidth * 0.3f);                 // Center the grid
 
         float fanRotation[noOfFans];
         for (int i = 0; i < noOfFans; i++)
@@ -356,18 +413,24 @@ int main()
             fanRotation[i] = fmod(glfwGetTime() * fanRotationSpeed[i] * 360.0f + i * 45.0f, 360.0f);
         }
 
-        for (int fan = 0; fan < noOfFans; fan++)
+        int fanIndex = 0;
+        for (int row = 0; row < fanRows; row++)
         {
-            glm::mat4 fanModel = glm::mat4(1.0f);
+            for (int col = 0; col < fanCols; col++)
+            {
+                glm::mat4 fanModel = glm::mat4(1.0f);
 
-            float x = ((roomLength - distanceBetween) / 2) - (roomLength / 2) + fan * distanceBetween;
+                float x = fanStartX + col * fanSpacingX;
+                float z = fanStartZ + row * fanSpacingZ;
 
-            fanModel = glm::translate(fanModel, glm::vec3(x, fanYPos, fanZPos));
-            fanModel = glm::scale(fanModel, glm::vec3(fanScale, fanScale, fanScale));
-            // Add rotation around Y-axis (vertical) for fan blades
-            fanModel = glm::rotate(fanModel, glm::radians(fanRotation[fan]), glm::vec3(0.0f, 1.0f, 0.0f));
+                fanModel = glm::translate(fanModel, glm::vec3(x, fanYPos, z));
+                fanModel = glm::scale(fanModel, glm::vec3(fanScale, fanScale, fanScale));
+                // Add rotation around Y-axis (vertical) for fan blades
+                fanModel = glm::rotate(fanModel, glm::radians(fanRotation[fanIndex]), glm::vec3(0.0f, 1.0f, 0.0f));
 
-            customFan.Draw(furnitureShader, fanModel, view, projection);
+                customFan.Draw(furnitureShader, fanModel, view, projection);
+                fanIndex++;
+            }
         }
 
         // Swap buffers and poll IO events

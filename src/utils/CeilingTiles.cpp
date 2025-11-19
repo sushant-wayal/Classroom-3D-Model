@@ -25,8 +25,8 @@ void CeilingTiles::generateCeilingTiles(float roomLength, float roomWidth, float
     float extrusionDepth = 0.03f; // 3cm extrusion depth (subtle)
 
     // Colors for realistic ceiling tiles
-    glm::vec3 tileColor = glm::vec3(0.95f, 0.94f, 0.92f);   // Off-white tile
-    glm::vec3 borderColor = glm::vec3(0.85f, 0.83f, 0.80f); // Slightly darker border
+    glm::vec3 tileColor = glm::vec3(0.99f, 0.99f, 0.99f);   // Pure white tile surface (shiny plastic)
+    glm::vec3 borderColor = glm::vec3(0.88f, 0.88f, 0.88f); // Light gray border/frame
 
     std::cout << "Generating ceiling with " << rows << " rows and " << cols << " columns" << std::endl;
     std::cout << "Tile dimensions: " << tileWidth << " x " << tileHeight << std::endl;
@@ -53,8 +53,8 @@ void CeilingTiles::addTile(glm::vec3 center, float tileWidth, float tileHeight, 
     unsigned int baseIndex = vertices.size();
 
     // Define tile colors
-    glm::vec3 tileColor = glm::vec3(0.95f, 0.94f, 0.92f);   // Off-white tile surface
-    glm::vec3 borderColor = glm::vec3(0.82f, 0.80f, 0.78f); // Darker border/frame
+    glm::vec3 tileColor = glm::vec3(0.99f, 0.99f, 0.99f);   // Pure white tile surface (shiny plastic)
+    glm::vec3 borderColor = glm::vec3(0.88f, 0.88f, 0.88f); // Light gray border/frame
 
     // Tile dimensions
     float halfWidth = tileWidth * 0.5f;
