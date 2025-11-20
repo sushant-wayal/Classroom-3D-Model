@@ -26,6 +26,7 @@ g++ -o main src/main.cpp \
     src/utils/CeilingTiles.cpp \
     src/utils/Windows.cpp \
     src/utils/RightWallWindows.cpp \
+    src/utils/GreenBoard.cpp \
     src/models/Model.cpp \
     -Iinclude \
     -lglfw \

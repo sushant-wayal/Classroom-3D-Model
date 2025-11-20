@@ -16,6 +16,7 @@
 #include "CeilingTiles.h"
 #include "Windows.h"
 #include "RightWallWindows.h"
+#include "GreenBoard.h"
 #include "models/Model.h"
 
 glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f); // Left side view position
@@ -464,6 +465,10 @@ int main()
     Model customFan("models/classroom_fan.obj");
     std::cout << "Custom Fan Model loaded successfully!" << std::endl;
 
+    // Load custom podium model
+    Model customPodium("models/classroom_podium.obj");
+    std::cout << "Custom Podium Model loaded successfully!" << std::endl;
+
     // Create realistic tiled ceiling with adjusted dimensions for classroom
     std::cout << "Creating tiled ceiling..." << std::endl;
     CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15); // 10 rows x 15 columns with larger tiles for 32m x 21.5m room
@@ -478,6 +483,11 @@ int main()
     std::cout << "Creating right wall windows..." << std::endl;
     RightWallWindows rightWallWindows(roomLength, roomWidth, roomHeight); // 6 windows on right wall
     std::cout << "Right wall windows created successfully!" << std::endl;
+
+    // Create green boards on front wall
+    std::cout << "Creating green boards on front wall..." << std::endl;
+    GreenBoard greenBoards(roomLength, roomWidth, roomHeight);
+    std::cout << "Green boards created successfully!" << std::endl;
 
     std::cout << "All furniture loaded successfully!" << std::endl;
 
@@ -533,6 +543,9 @@ int main()
 
         // Render right wall windows with transparent glass and white frames
         rightWallWindows.Draw(roomShader, roomModel, view, projection);
+
+        // Render green boards on front wall
+        greenBoards.Draw(roomShader, roomModel, view, projection);
 
         // Render furniture with lighting
         furnitureShader.Activate();
@@ -659,6 +672,25 @@ int main()
             }
         }
 
+        // Render podium in front of class near the right side
+        glm::mat4 podiumModel = glm::mat4(1.0f);
+
+        // Position the podium in front of the class, near the right side
+        // X position: towards the right side of the room (positive X)
+        // Y position: adjusted to just touch the floor (not floating, not below)
+        // Z position: in the front area (positive Z, near front wall)
+        float podiumX = roomLength / 2 - 5.5f; // 5.5m from right wall
+        float podiumY = 1.7f;                  // Lowered to 1.7m - should just touch the floor perfectly
+        float podiumZ = roomWidth / 2 - 2.0f;  // 2m from front wall
+        float podiumScale = 1.5f;              // Scale to appropriate size for classroom
+
+        podiumModel = glm::translate(podiumModel, glm::vec3(podiumX, podiumY, podiumZ));
+        podiumModel = glm::scale(podiumModel, glm::vec3(podiumScale, podiumScale, podiumScale));
+        // Rotate 90 degrees (positive) to face the back wall (negative Z direction where benches are)
+        podiumModel = glm::rotate(podiumModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        customPodium.Draw(furnitureShader, podiumModel, view, projection);
+
         // Swap buffers and poll IO events
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -680,9 +712,11 @@ int main()
     // Clean up furniture
     customDesk.Delete();
     customFan.Delete();
+    customPodium.Delete();
     ceilingTiles.Delete();
     backWallWindows.Delete();
     rightWallWindows.Delete();
+    greenBoards.Delete();
 
     glfwDestroyWindow(window);
     glfwTerminate();
