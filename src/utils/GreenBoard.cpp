@@ -21,21 +21,23 @@ GreenBoard::GreenBoard(float roomLength, float roomWidth, float roomHeight)
     float frameDepth = 0.12f; // Frames extend 12cm from wall (more prominent)
 
     // Calculate positions - centered horizontally and vertically
-    float gapBetweenBoards = 0.0f;     // No gap between boards
-    float totalWidth = 2 * boardWidth; // Total width of both boards
-    float centerY = roomHeight / 2.0f; // Center vertically
+    // Gap between boards = 2x frame thickness so frames don't overlap
+    float gapBetweenBoards = 2.0f * frameThickness;       // Gap to prevent frame overlap (16cm)
+    float totalWidth = 2 * boardWidth + gapBetweenBoards; // Total width of both boards + gap
+    float centerY = roomHeight / 2.0f;                    // Center vertically
 
     float leftBoardLeftX = -totalWidth / 2.0f;
     float leftBoardRightX = leftBoardLeftX + boardWidth;
-    float rightBoardLeftX = leftBoardRightX; // No gap
+    float rightBoardLeftX = leftBoardRightX + gapBetweenBoards; // Add gap
     float rightBoardRightX = rightBoardLeftX + boardWidth;
 
     float boardBottomY = centerY - boardHeight / 2.0f;
     float boardTopY = centerY + boardHeight / 2.0f;
 
     std::cout << "\n=== Creating GREEN BOARDS (with rounded corners) ===" << std::endl;
-    std::cout << "Number of boards: 2 (side-by-side, no gap)" << std::endl;
+    std::cout << "Number of boards: 2 (side-by-side)" << std::endl;
     std::cout << "Each board dimensions: " << boardWidth << "m x " << boardHeight << "m" << std::endl;
+    std::cout << "Gap between boards: " << gapBetweenBoards << "m (prevents frame overlap)" << std::endl;
     std::cout << "Total combined width: " << totalWidth << "m (REDUCED by 25%)" << std::endl;
     std::cout << "Frame thickness: " << frameThickness << "m (shiny grayish metallic with rounded corners)" << std::endl;
 
@@ -45,7 +47,7 @@ GreenBoard::GreenBoard(float roomLength, float roomWidth, float roomHeight)
     std::vector<GLuint> frameIndices;
 
     // DARKER green board color (much darker matte green)
-    float boardR = 0.00f, boardG = 0.3f, boardB = 0.00f; // Much darker green
+    float boardR = 0.05f, boardG = 0.15f, boardB = 0.05f; // Very dark green (Option 1)
 
     // Create rounded corners using segments
     int cornerSegments = 8;     // Number of segments for rounded corners

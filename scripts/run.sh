@@ -29,6 +29,7 @@ g++ -o main src/main.cpp \
     src/utils/RightWallWindows.cpp \
     src/utils/GreenBoard.cpp \
     src/utils/Door.cpp \
+    src/utils/ProjectorScreen.cpp \
     src/models/Model.cpp \
     -Iinclude \
     -lglfw \

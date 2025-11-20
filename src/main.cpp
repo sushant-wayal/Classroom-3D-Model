@@ -19,6 +19,7 @@
 #include "RightWallWindows.h"
 #include "GreenBoard.h"
 #include "Door.h"
+#include "ProjectorScreen.h"
 #include "models/Model.h"
 
 glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f); // Left side view position
@@ -112,6 +113,21 @@ void processInput(GLFWwindow *window)
     }
 }
 
+// Forward declaration for projector screen pointer
+ProjectorScreen *projectorScreen = nullptr;
+
+// Keyboard callback for single key presses (toggle actions)
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    if (action == GLFW_PRESS)
+    {
+        if (key == GLFW_KEY_P && projectorScreen != nullptr)
+        {
+            projectorScreen->ToggleScreen();
+        }
+    }
+}
+
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
     if (firstMouse)
@@ -168,6 +184,7 @@ int main()
 
     glfwMakeContextCurrent(window);
     glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetKeyCallback(window, key_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // Initialize GLEW
@@ -519,6 +536,10 @@ int main()
     Model customProjector("models/classroom_projector.obj");
     std::cout << "Custom Projector Model loaded successfully!" << std::endl;
 
+    // Load custom projector screen rod model
+    Model projectorScreenRod("models/project_screen_rod.obj");
+    std::cout << "Projector Screen Rod Model loaded successfully!" << std::endl;
+
     // Create realistic tiled ceiling with adjusted dimensions for classroom
     std::cout << "Creating tiled ceiling..." << std::endl;
     CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15); // 10 rows x 15 columns with larger tiles for 32m x 21.5m room
@@ -575,6 +596,11 @@ int main()
     Door entranceDoor(roomLength, roomWidth, roomHeight);
     std::cout << "Entrance door created successfully!" << std::endl;
 
+    // Create interactive projector screen above green boards
+    std::cout << "Creating interactive projector screen..." << std::endl;
+    projectorScreen = new ProjectorScreen(roomLength, roomWidth, roomHeight);
+    std::cout << "Projector screen created successfully! Press 'P' to toggle dropdown/rollup!" << std::endl;
+
     std::cout << "All furniture loaded successfully!" << std::endl;
 
     // Render loop
@@ -584,6 +610,12 @@ int main()
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        // Update projector screen animation
+        if (projectorScreen != nullptr)
+        {
+            projectorScreen->Update(deltaTime);
+        }
 
         // Input
         processInput(window);
@@ -636,6 +668,12 @@ int main()
 
         // Render green boards on front wall
         greenBoards.Draw(roomShader, roomModel, view, projection);
+
+        // Render interactive projector screen (if extended)
+        if (projectorScreen != nullptr)
+        {
+            projectorScreen->Draw(roomShader, roomModel, view, projection);
+        }
 
         // Render entrance door on right wall
         entranceDoor.Draw(roomShader, roomModel, view, projection);
@@ -777,7 +815,7 @@ int main()
         // Y position: adjusted to just touch the floor (not floating, not below)
         // Z position: in the front area (positive Z, near front wall)
         float podiumX = roomLength / 2 - 5.5f; // 5.5m from right wall
-        float podiumY = 1.35f;                  // Lowered to 1.35m - should just touch the floor perfectly
+        float podiumY = 1.35f;                 // Lowered to 1.35m - should just touch the floor perfectly
         float podiumZ = roomWidth / 2 - 2.0f;  // 2m from front wall
         float podiumScale = 1.2f;              // Scale to appropriate size for classroom
 
@@ -809,6 +847,31 @@ int main()
 
         customProjector.Draw(furnitureShader, projectorModel, view, projection);
 
+        // Render projector screen rod above green boards on front wall
+        // Reset white plastic material to 0 for screen rod (use default material)
+        glUniform1i(glGetUniformLocation(furnitureShader.ID, "isWhitePlastic"), 0);
+
+        glm::mat4 screenRodModel = glm::mat4(1.0f);
+
+        // Position centered horizontally on front wall, above the green boards
+        // Green boards are centered and have height of roomHeight * 0.35f
+        // Green boards are centered vertically at roomHeight / 2.0f
+        float boardHeight = roomHeight * 0.35f;
+        float boardTopY = roomHeight / 2.0f + boardHeight / 2.0f;
+
+        float screenRodX = 0.0f;               // Centered horizontally on front wall
+        float screenRodY = boardTopY + 0.3f;   // 30cm above the top of green boards
+        float screenRodZ = frontWallZ - 0.15f; // Just in front of the front wall (15cm)
+        float screenRodScale = 0.5f;           // Adjust scale as needed
+
+        screenRodModel = glm::translate(screenRodModel, glm::vec3(screenRodX, screenRodY, screenRodZ));
+        screenRodModel = glm::scale(screenRodModel, glm::vec3(screenRodScale, screenRodScale, screenRodScale));
+        // Rotate to align horizontally along the X-axis (rod runs left-right across the wall)
+        // Assuming the model's default orientation needs adjustment - rotate 90 degrees around Y-axis
+        screenRodModel = glm::rotate(screenRodModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        projectorScreenRod.Draw(furnitureShader, screenRodModel, view, projection);
+
         // Swap buffers and poll IO events
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -832,12 +895,20 @@ int main()
     customFan.Delete();
     customPodium.Delete();
     customProjector.Delete();
+    projectorScreenRod.Delete();
     ceilingTiles.Delete();
     lightPanels.Delete();
     backWallWindows.Delete();
     rightWallWindows.Delete();
     greenBoards.Delete();
     entranceDoor.Delete();
+
+    if (projectorScreen != nullptr)
+    {
+        projectorScreen->Delete();
+        delete projectorScreen;
+        projectorScreen = nullptr;
+    }
 
     glfwDestroyWindow(window);
     glfwTerminate();

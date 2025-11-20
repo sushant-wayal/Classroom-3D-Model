@@ -30,15 +30,15 @@ void main()
         objectColor = materialDiffuse;
     }
     
-    // Reduced ambient lighting to preserve material colors and textures
-    float ambientStrength = 0.35;  // Increased slightly from 0.30 to better see textures
+    // Balanced ambient lighting - enough to see details but preserves color integrity
+    float ambientStrength = 0.06;  // Increased from 0.03 to better illuminate furniture
     vec3 ambient = ambientStrength * lightColor;
     
     // Smooth diffuse lighting
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
     
-    // Calculate lighting contribution from both lights
+    // Calculate lighting contribution from both lights with REDUCED ATTENUATION
     vec3 diffuse = vec3(0.0);
     vec3 specular = vec3(0.0);
     
@@ -55,24 +55,34 @@ void main()
         specularStrength = 0.2;
     }
     
-    // Light 1 - Balanced intensity to preserve colors and textures
+    // Light 1 - Reduced attenuation for better coverage
     vec3 lightDir1 = normalize(lightPos1 - FragPos);
     float diff1 = max(dot(norm, lightDir1), 0.0);
-    diffuse += diff1 * lightColor * 0.65;  // Slightly increased from 0.6 for better texture visibility
+    float distance1 = length(lightPos1 - FragPos);
+    // REDUCED attenuation - lights reach farther
+    float attenuation1 = 1.0 / (1.0 + 0.045 * distance1 + 0.0075 * distance1 * distance1);
+    diffuse += diff1 * lightColor * attenuation1 * 1.6;  // Good illumination intensity
     
     vec3 reflectDir1 = reflect(-lightDir1, norm);
     float spec1 = pow(max(dot(viewDir, reflectDir1), 0.0), 32);
-    specular += specularStrength * spec1 * lightColor;
+    specular += specularStrength * spec1 * lightColor * attenuation1;
     
-    // Light 2 - Balanced intensity to preserve colors and textures
+    // Light 2 - Reduced attenuation for better coverage
     vec3 lightDir2 = normalize(lightPos2 - FragPos);
     float diff2 = max(dot(norm, lightDir2), 0.0);
-    diffuse += diff2 * lightColor * 0.65;  // Slightly increased from 0.6 for better texture visibility
+    float distance2 = length(lightPos2 - FragPos);
+    // REDUCED attenuation - lights reach farther
+    float attenuation2 = 1.0 / (1.0 + 0.045 * distance2 + 0.0075 * distance2 * distance2);
+    diffuse += diff2 * lightColor * attenuation2 * 1.6;  // Good illumination intensity
     
     vec3 reflectDir2 = reflect(-lightDir2, norm);
     float spec2 = pow(max(dot(viewDir, reflectDir2), 0.0), 32);
-    specular += specularStrength * spec2 * lightColor;
+    specular += specularStrength * spec2 * lightColor * attenuation2;
     
     vec3 result = (ambient + diffuse + specular) * objectColor;
+    
+    // Clamp to prevent over-brightness
+    result = clamp(result, 0.0, 1.0);
+    
     FragColor = vec4(result, 1.0);
 }

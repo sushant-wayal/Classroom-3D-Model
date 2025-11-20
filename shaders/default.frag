@@ -45,49 +45,46 @@ void main()
        baseColor = baseColor * (1.0 + bumpNoise);
    }
    
-   // Reduced ambient lighting to preserve material colors
-   float ambientStrength = 0.25;  // Reduced from 0.35 to preserve yellowish wall color
-   vec3 ambient = ambientStrength * vec3(1.0, 1.0, 1.0) * baseColor;
+   // Balanced ambient lighting - enough to see in corners but preserves blacks
+   float ambientStrength = 0.5;  // Increased from 0.015 to light up dark corners
+   vec3 ambient = ambientStrength * lightColor * baseColor;
    
    // Smooth diffuse lighting
    vec3 norm = normalize(Normal);
    
-   // Calculate lighting contribution from both lights
+   // Calculate lighting contribution from both lights with REDUCED ATTENUATION
    vec3 diffuse = vec3(0.0);
    vec3 specular = vec3(0.0);
    
-   // Light 1 - Reduced intensity to prevent over-brightness
+   // Light 1 - Reduced attenuation so light reaches farther
    vec3 lightDir1 = normalize(lightPos1 - FragPos);
    float diff1 = max(dot(norm, lightDir1), 0.0);
    float distance1 = length(lightPos1 - FragPos);
-   float attenuation1 = 1.0 / (1.0 + 0.035 * distance1 + 0.005 * distance1 * distance1);  // Increased attenuation
-   diffuse += diff1 * lightColor * attenuation1 * 0.5;  // Reduced from 0.7 to 0.5
+   // REDUCED attenuation - lights reach much farther into corners
+   float attenuation1 = 1.0 / (1.0 + 0.045 * distance1 + 0.0075 * distance1 * distance1);
+   diffuse += diff1 * lightColor * attenuation1 * baseColor * 1.5;  // Increased intensity
    
    vec3 viewDir = normalize(-FragPos);
    vec3 reflectDir1 = reflect(-lightDir1, norm);
    float spec1 = pow(max(dot(viewDir, reflectDir1), 0.0), shininess);
    specular += specularStrength * spec1 * lightColor * attenuation1;
    
-   // Light 2 - Reduced intensity to prevent over-brightness
+   // Light 2 - Reduced attenuation so light reaches farther
    vec3 lightDir2 = normalize(lightPos2 - FragPos);
    float diff2 = max(dot(norm, lightDir2), 0.0);
    float distance2 = length(lightPos2 - FragPos);
-   float attenuation2 = 1.0 / (1.0 + 0.035 * distance2 + 0.005 * distance2 * distance2);  // Increased attenuation
-   diffuse += diff2 * lightColor * attenuation2 * 0.5;  // Reduced from 0.7 to 0.5
+   // REDUCED attenuation - lights reach much farther into corners
+   float attenuation2 = 1.0 / (1.0 + 0.045 * distance2 + 0.0075 * distance2 * distance2);
+   diffuse += diff2 * lightColor * attenuation2 * baseColor * 1.5;  // Increased intensity
    
    vec3 reflectDir2 = reflect(-lightDir2, norm);
    float spec2 = pow(max(dot(viewDir, reflectDir2), 0.0), shininess);
    specular += specularStrength * spec2 * lightColor * attenuation2;
    
-   // Add subtle fill light from below for more even lighting
-   vec3 upDir = vec3(0.0, 1.0, 0.0);
-   float upLight = max(dot(norm, upDir), 0.0) * 0.10;  // Reduced from 0.15
-   vec3 fillLight = upLight * vec3(1.0, 1.0, 0.98) * baseColor;
+   vec3 result = ambient + diffuse + specular;
    
-   vec3 result = ambient + diffuse + specular + fillLight;
+   // Clamp to prevent over-brightness
+   result = clamp(result, 0.0, 1.0);
    
-   // Subtle gamma correction for natural appearance
-   result = pow(result, vec3(1.0/2.2));
-   
-   FragColor = vec4(result, vertexAlpha); // Use vertex alpha for transparency
+   FragColor = vec4(result, vertexAlpha);
 }
