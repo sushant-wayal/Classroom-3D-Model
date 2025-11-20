@@ -14,9 +14,11 @@
 #include "EBO.h"
 #include "Furniture.h"
 #include "CeilingTiles.h"
+#include "LightPanels.h"
 #include "Windows.h"
 #include "RightWallWindows.h"
 #include "GreenBoard.h"
+#include "Door.h"
 #include "models/Model.h"
 
 glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f); // Left side view position
@@ -33,8 +35,12 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// Lighting
-glm::vec3 lightPos = glm::vec3(0.0f, 6.0f, 0.0f);
+// Lighting - Two lights positioned at ceiling tiles
+// Room has 10 rows x 15 columns of tiles
+// Second row from FRONT wall, 4th tile from left (col 3, row 8)
+// Second row from FRONT wall, 8th tile from left (col 7, row 8)
+glm::vec3 lightPos1; // Will be calculated based on tile position
+glm::vec3 lightPos2; // Will be calculated based on tile position
 glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f);
 
 float fanRotationSpeed[furniture::fans];
@@ -341,7 +347,7 @@ int main()
     backWallVBO.Unbind();
     backWallEBO.Unbind();
 
-    // Create right wall vertices with 6 INDIVIDUAL window holes (5 back + 1 front)
+    // Create right wall vertices with 6 INDIVIDUAL window holes (5 back + 1 front) + DOOR HOLE at door location only
     std::vector<GLfloat> rightWallVertices;
     std::vector<GLuint> rightWallIndices;
 
@@ -353,26 +359,62 @@ int main()
     float backMarginRight = 0.5f;
     float frontMarginRight = 0.5f;
 
+    // DOOR PARAMETERS - must match Door.cpp exactly
+    float doorHeight = 2.1f * 2.0f; // 4.2m height (2x bigger)
+    float doorWidth = 1.0f * 2.0f;  // 2.0m width (2x bigger)
+    float doorBottomY = 0.0f;
+    float doorTopY = doorBottomY + doorHeight;
+
+    // Door position - towards front
+    float doorCenterZ = frontWallZ - frontMarginRight - 2.0f;
+    float doorBackZ = doorCenterZ - doorWidth / 2.0f;
+    float doorFrontZ = doorCenterZ + doorWidth / 2.0f;
+
+    std::cout << "\n=== Creating RIGHT WALL with DOOR HOLE (keeping windows intact) ===" << std::endl;
+    std::cout << "Door hole at Z: " << doorBackZ << "m to " << doorFrontZ << "m, Y: 0m to " << doorTopY << "m" << std::endl;
+
     // BACK SECTION: 5 windows
     int numBackWindows = 5;
     float backSectionStart = backWallZ + backMarginRight;
     float backSectionLength = numBackWindows * rightWindowWidth + (numBackWindows - 1) * spacingBetweenWindows;
 
-    // FRONT SECTION: 1 window (CHANGED from 2 to 1)
+    // FRONT SECTION: 1 window
     int numFrontWindows = 1;
     float frontSectionEnd = frontWallZ - frontMarginRight;
-    float frontSectionLength = numFrontWindows * rightWindowWidth; // No spacing needed for single window
+    float frontSectionLength = numFrontWindows * rightWindowWidth;
     float frontSectionStart = frontSectionEnd - frontSectionLength;
 
-    // Bottom section (floor to window bottom) - SOLID WALL
+    // Bottom section (floor to window bottom) - WITH DOOR HOLE
+    // Part 1: From back wall to door
     rightWallVertices.insert(rightWallVertices.end(), {rightWallX, 0.0f, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, 0.0f, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowBottomY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, 0.0f, doorBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowBottomY, doorBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
                                                        rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
     rightWallIndices.insert(rightWallIndices.end(), {0, 1, 2, 2, 3, 0});
     rightVertexIndex = 4;
 
-    // Top section (window top to ceiling) - SOLID WALL
+    // Part 2: Above door (from door top to window bottom) - only if door is shorter than window bottom
+    if (doorTopY < windowBottomY)
+    {
+        rightWallVertices.insert(rightWallVertices.end(), {rightWallX, doorTopY, doorBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                           rightWallX, doorTopY, doorFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                           rightWallX, windowBottomY, doorFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                           rightWallX, windowBottomY, doorBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
+        rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
+                                                         rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
+        rightVertexIndex += 4;
+    }
+
+    // Part 3: From door to front wall
+    rightWallVertices.insert(rightWallVertices.end(), {rightWallX, 0.0f, doorFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, 0.0f, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowBottomY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
+                                                       rightWallX, windowBottomY, doorFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
+    rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
+                                                     rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
+    rightVertexIndex += 4;
+
+    // Top section (window top to ceiling) - SOLID WALL (NO DOOR HOLE HERE)
     rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
                                                        rightWallX, windowTopY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
                                                        rightWallX, roomHeight, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
@@ -381,7 +423,7 @@ int main()
                                                      rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
     rightVertexIndex += 4;
 
-    // Middle section - wall with 6 INDIVIDUAL window holes in 2 sections
+    // Middle section - wall with 6 INDIVIDUAL window holes (KEEP ALL WINDOWS!)
     // BACK SECTION: Create wall sections for 5 windows
     for (int i = 0; i < numBackWindows; i++)
     {
@@ -428,10 +470,10 @@ int main()
     }
 
     // FRONT SECTION: Create wall section for 1 window
-    // Front edge wall section (from last window to front wall)
     float windowBackZ = frontSectionStart;
     float windowFrontZ = windowBackZ + rightWindowWidth;
 
+    // Front edge wall section (from last window to front wall)
     rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
                                                        rightWallX, windowBottomY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
                                                        rightWallX, windowTopY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
@@ -440,7 +482,11 @@ int main()
                                                      rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
     rightVertexIndex += 4;
 
-    // Create VAO/VBO/EBO for right wall with 6 individual holes
+    std::cout << "✓ Right wall created with door hole at floor level only (windows intact)!" << std::endl;
+    std::cout << "===========================================\n"
+              << std::endl;
+
+    // Create VAO/VBO/EBO for right wall with 6 window holes + 1 door hole
     VAO rightWallVAO;
     rightWallVAO.Bind();
 
@@ -458,21 +504,56 @@ int main()
     // Create furniture pieces - Simple texture application
     std::cout << "Loading custom Blender models..." << std::endl;
 
-    // Load custom desk model with simple texture application
-    Model customDesk("models/classroom_desk.obj", "textures/desk_texture.jpeg");
-    std::cout << "Custom desk model loaded with wood texture applied to entire model!" << std::endl;
+    // Load custom desk model with texture from MTL file
+    Model customDesk("models/desk.obj");
+    std::cout << "Custom desk model loaded with texture from MTL file!" << std::endl;
 
     Model customFan("models/classroom_fan.obj");
     std::cout << "Custom Fan Model loaded successfully!" << std::endl;
 
-    // Load custom podium model
-    Model customPodium("models/classroom_podium.obj");
-    std::cout << "Custom Podium Model loaded successfully!" << std::endl;
+    // Load custom podium model with materials from MTL file
+    Model customPodium("models/podium.obj");
+    std::cout << "Custom Podium Model loaded with materials from MTL file!" << std::endl;
+
+    // Load custom projector model
+    Model customProjector("models/classroom_projector.obj");
+    std::cout << "Custom Projector Model loaded successfully!" << std::endl;
 
     // Create realistic tiled ceiling with adjusted dimensions for classroom
     std::cout << "Creating tiled ceiling..." << std::endl;
     CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15); // 10 rows x 15 columns with larger tiles for 32m x 21.5m room
     std::cout << "Tiled ceiling created successfully!" << std::endl;
+
+    // Create glowing light panels at specific tile positions
+    std::cout << "Creating glowing light panels..." << std::endl;
+    LightPanels lightPanels(roomLength, roomWidth, roomHeight, 10, 15, 8, 3, 8, 7); // Row 8, Col 3 and Col 7
+    std::cout << "Light panels created successfully!" << std::endl;
+
+    // Calculate light positions based on ceiling tile grid
+    // Ceiling has 10 rows x 15 columns
+    // Second row from FRONT wall (row index 8), 4th tile from left (col index 3)
+    // Second row from FRONT wall (row index 8), 8th tile from left (col index 7)
+    int ceilingRows = 10;
+    int ceilingCols = 15;
+    float tileWidth = roomLength / ceilingCols;
+    float tileHeight = roomWidth / ceilingRows;
+
+    // Calculate center of tile at row 8 (2nd from front), col 3 (4th from left)
+    float light1X = -roomLength / 2.0f + (3 + 0.5f) * tileWidth;
+    float light1Z = -roomWidth / 2.0f + (8 + 0.5f) * tileHeight; // Row 8 = 2nd from front
+    float lightY = roomHeight - 0.3f;                            // Just below ceiling (was 0.5f)
+    lightPos1 = glm::vec3(light1X, lightY, light1Z);
+
+    // Calculate center of tile at row 8 (2nd from front), col 7 (8th from left)
+    float light2X = -roomLength / 2.0f + (7 + 0.5f) * tileWidth;
+    float light2Z = -roomWidth / 2.0f + (8 + 0.5f) * tileHeight; // Row 8 = 2nd from front
+    lightPos2 = glm::vec3(light2X, lightY, light2Z);
+
+    std::cout << "\n=== LIGHT POSITIONS ===" << std::endl;
+    std::cout << "Light 1 (2nd row from front, 4th tile): (" << light1X << ", " << lightY << ", " << light1Z << ")" << std::endl;
+    std::cout << "Light 2 (2nd row from front, 8th tile): (" << light2X << ", " << lightY << ", " << light2Z << ")" << std::endl;
+    std::cout << "========================\n"
+              << std::endl;
 
     // Create windows on back wall with transparent glass and white plastic frames
     std::cout << "Creating back wall windows..." << std::endl;
@@ -488,6 +569,11 @@ int main()
     std::cout << "Creating green boards on front wall..." << std::endl;
     GreenBoard greenBoards(roomLength, roomWidth, roomHeight);
     std::cout << "Green boards created successfully!" << std::endl;
+
+    // Create entrance door on right wall
+    std::cout << "Creating entrance door on right wall..." << std::endl;
+    Door entranceDoor(roomLength, roomWidth, roomHeight);
+    std::cout << "Entrance door created successfully!" << std::endl;
 
     std::cout << "All furniture loaded successfully!" << std::endl;
 
@@ -520,8 +606,9 @@ int main()
         glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
-        // Set lighting uniforms for room
-        glUniform3fv(glGetUniformLocation(roomShader.ID, "lightPos"), 1, glm::value_ptr(lightPos));
+        // Set lighting uniforms for room - TWO LIGHTS
+        glUniform3fv(glGetUniformLocation(roomShader.ID, "lightPos1"), 1, glm::value_ptr(lightPos1));
+        glUniform3fv(glGetUniformLocation(roomShader.ID, "lightPos2"), 1, glm::value_ptr(lightPos2));
         glUniform3fv(glGetUniformLocation(roomShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
 
         roomVAO.Bind();
@@ -538,6 +625,9 @@ int main()
         // Render tiled ceiling
         ceilingTiles.Draw(roomShader, roomModel, view, projection);
 
+        // Render glowing light panels at tile positions (uses own emissive shader)
+        lightPanels.Draw(roomModel, view, projection);
+
         // Render back wall windows with transparent glass and white frames
         backWallWindows.Draw(roomShader, roomModel, view, projection);
 
@@ -547,23 +637,30 @@ int main()
         // Render green boards on front wall
         greenBoards.Draw(roomShader, roomModel, view, projection);
 
+        // Render entrance door on right wall
+        entranceDoor.Draw(roomShader, roomModel, view, projection);
+
         // Render furniture with lighting
         furnitureShader.Activate();
 
-        // Set lighting uniforms
-        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightPos"), 1, glm::value_ptr(lightPos));
+        // Set lighting uniforms - TWO LIGHTS
+        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightPos1"), 1, glm::value_ptr(lightPos1));
+        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightPos2"), 1, glm::value_ptr(lightPos2));
         glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
         glUniform3fv(glGetUniformLocation(furnitureShader.ID, "viewPos"), 1, glm::value_ptr(cameraPos));
+
+        // Set white plastic material to 0 by default (not white plastic)
+        glUniform1i(glGetUniformLocation(furnitureShader.ID, "isWhitePlastic"), 0);
 
         // Scale factor to make desk proportional to classroom size
         float deskScale = furniture::deskScale;
         int noOfRows = furniture::rows;
         int noOfCols = furniture::cols;
 
-        float deskYPos = 0.0f;
+        float deskYPos = 1.6f; // Significantly lifted - model's lowest Y is around -1.6, so this puts base at floor level
 
         // FIXED spacing between benches - NO OVERLAP!
-        // Each scaled bench is approximately 1.8m wide and 1.6m deep (seat + backrest = 2m total)
+        // Each scaled bench is approximately 1.8f wide and 1.6f deep (seat + backrest = 2m total)
         float spacingBetweenCols = 5.0f; // SIGNIFICANTLY INCREASED to 5.0m spacing between column centers (MAXIMUM SEPARATION!)
         float spacingBetweenRows = 3.5f; // Fixed 3.5m spacing between row centers (PERFECT - DO NOT CHANGE!)
 
@@ -680,9 +777,9 @@ int main()
         // Y position: adjusted to just touch the floor (not floating, not below)
         // Z position: in the front area (positive Z, near front wall)
         float podiumX = roomLength / 2 - 5.5f; // 5.5m from right wall
-        float podiumY = 1.7f;                  // Lowered to 1.7m - should just touch the floor perfectly
+        float podiumY = 1.35f;                  // Lowered to 1.35m - should just touch the floor perfectly
         float podiumZ = roomWidth / 2 - 2.0f;  // 2m from front wall
-        float podiumScale = 1.5f;              // Scale to appropriate size for classroom
+        float podiumScale = 1.2f;              // Scale to appropriate size for classroom
 
         podiumModel = glm::translate(podiumModel, glm::vec3(podiumX, podiumY, podiumZ));
         podiumModel = glm::scale(podiumModel, glm::vec3(podiumScale, podiumScale, podiumScale));
@@ -690,6 +787,27 @@ int main()
         podiumModel = glm::rotate(podiumModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
         customPodium.Draw(furnitureShader, podiumModel, view, projection);
+
+        // Render projector at exact center of ceiling, facing front wall
+        // Set white plastic material for projector
+        glUniform1i(glGetUniformLocation(furnitureShader.ID, "isWhitePlastic"), 1);
+
+        glm::mat4 projectorModel = glm::mat4(1.0f);
+
+        // Position at exact center of room (X=0, Z=0)
+        // Y position: adjusted so rod top touches ceiling, entire rod and projector hang below
+        float projectorX = 0.0f;              // Exact center horizontally
+        float projectorY = roomHeight - 2.2f; // At ceiling level (rod top touches ceiling)
+        float projectorZ = 0.0f;              // Exact center depth-wise
+        float projectorScale = 0.3f;          // Scaled down significantly (was 1.0f)
+
+        projectorModel = glm::translate(projectorModel, glm::vec3(projectorX, projectorY, projectorZ));
+        projectorModel = glm::scale(projectorModel, glm::vec3(projectorScale, projectorScale, projectorScale));
+        // Rotate 90 degrees to face the front wall (positive Z direction)
+        // Since it's currently facing right wall, rotate 90 degrees counterclockwise
+        projectorModel = glm::rotate(projectorModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        customProjector.Draw(furnitureShader, projectorModel, view, projection);
 
         // Swap buffers and poll IO events
         glfwSwapBuffers(window);
@@ -713,10 +831,13 @@ int main()
     customDesk.Delete();
     customFan.Delete();
     customPodium.Delete();
+    customProjector.Delete();
     ceilingTiles.Delete();
+    lightPanels.Delete();
     backWallWindows.Delete();
     rightWallWindows.Delete();
     greenBoards.Delete();
+    entranceDoor.Delete();
 
     glfwDestroyWindow(window);
     glfwTerminate();

@@ -24,9 +24,11 @@ g++ -o main src/main.cpp \
     src/utils/Furniture.cpp \
     src/utils/Texture.cpp \
     src/utils/CeilingTiles.cpp \
+    src/utils/LightPanels.cpp \
     src/utils/Windows.cpp \
     src/utils/RightWallWindows.cpp \
     src/utils/GreenBoard.cpp \
+    src/utils/Door.cpp \
     src/models/Model.cpp \
     -Iinclude \
     -lglfw \

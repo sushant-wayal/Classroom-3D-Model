@@ -1,44 +1,169 @@
 #include "models/Model.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
-#include <map>
 
-// Comparison struct for glm::vec3 to use in std::map
-struct CompareVec3
+void Mesh::setupMesh()
 {
-    bool operator()(const glm::vec3 &a, const glm::vec3 &b) const
+    meshVAO.Bind();
+
+    meshVBO = new VBO((GLfloat *)vertices.data(), vertices.size() * sizeof(Vertex));
+    meshEBO = new EBO(indices.data(), indices.size() * sizeof(unsigned int));
+
+    // Position attribute (location = 0)
+    meshVAO.LinkVBOAttrib(*meshVBO, 0, 3, GL_FLOAT, sizeof(Vertex), (void *)0);
+    // Normal attribute (location = 1)
+    meshVAO.LinkVBOAttrib(*meshVBO, 1, 3, GL_FLOAT, sizeof(Vertex), (void *)(offsetof(Vertex, Normal)));
+    // Texture coordinate attribute (location = 2)
+    meshVAO.LinkVBOAttrib(*meshVBO, 2, 2, GL_FLOAT, sizeof(Vertex), (void *)(offsetof(Vertex, TexCoords)));
+
+    meshVAO.Unbind();
+    meshVBO->Unbind();
+    meshEBO->Unbind();
+}
+
+void Mesh::Draw(Shader &shader)
+{
+    // Bind material properties
+    if (material)
     {
-        const float epsilon = 0.0001f;
-        if (std::abs(a.x - b.x) > epsilon)
-            return a.x < b.x;
-        if (std::abs(a.y - b.y) > epsilon)
-            return a.y < b.y;
-        return a.z < b.z;
+        if (material->diffuseMap != nullptr)
+        {
+            glActiveTexture(GL_TEXTURE0);
+            material->diffuseMap->Bind();
+            material->diffuseMap->texUnit(shader.ID, "tex0", 0);
+            glUniform1i(glGetUniformLocation(shader.ID, "hasTexture"), 1);
+        }
+        else
+        {
+            // No texture, use material diffuse color
+            glUniform1i(glGetUniformLocation(shader.ID, "hasTexture"), 0);
+            glUniform3fv(glGetUniformLocation(shader.ID, "materialDiffuse"), 1, glm::value_ptr(material->diffuse));
+        }
     }
-};
+    else
+    {
+        glUniform1i(glGetUniformLocation(shader.ID, "hasTexture"), 0);
+    }
+
+    meshVAO.Bind();
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    meshVAO.Unbind();
+
+    if (material && material->diffuseMap != nullptr)
+    {
+        material->diffuseMap->Unbind();
+    }
+}
+
+void Mesh::Delete()
+{
+    meshVAO.Delete();
+    if (meshVBO)
+    {
+        meshVBO->Delete();
+        delete meshVBO;
+        meshVBO = nullptr;
+    }
+    if (meshEBO)
+    {
+        meshEBO->Delete();
+        delete meshEBO;
+        meshEBO = nullptr;
+    }
+}
 
 Model::Model(const char *objFile)
 {
-    texture = nullptr;
     loadOBJ(objFile);
-    setupModel();
 }
 
 Model::Model(const char *objFile, const char *texturePath)
 {
-    texture = new Texture(texturePath);
+    // Load OBJ with materials, then override with single texture
     loadOBJ(objFile);
-    setupModel();
+
+    // Apply single texture to all meshes (legacy support)
+    for (auto &mesh : meshes)
+    {
+        if (mesh.material && mesh.material->diffuseMap == nullptr)
+        {
+            mesh.material->diffuseMap = new Texture(texturePath);
+        }
+    }
 }
 
-void Model::SetTexture(const char *texturePath)
+void Model::loadMTL(const std::string &mtlFile, const std::string &basePath)
 {
-    if (texture != nullptr)
+    std::ifstream file(mtlFile);
+    if (!file.is_open())
     {
-        texture->Delete();
-        delete texture;
+        std::cerr << "Failed to open MTL file: " << mtlFile << std::endl;
+        return;
     }
-    texture = new Texture(texturePath);
+
+    Material *currentMaterial = nullptr;
+    std::string line;
+
+    while (std::getline(file, line))
+    {
+        std::istringstream iss(line);
+        std::string prefix;
+        iss >> prefix;
+
+        if (prefix == "newmtl")
+        {
+            std::string materialName;
+            iss >> materialName;
+
+            currentMaterial = new Material();
+            currentMaterial->name = materialName;
+            materials[materialName] = currentMaterial;
+
+            std::cout << "Loading material: " << materialName << std::endl;
+        }
+        else if (currentMaterial != nullptr)
+        {
+            if (prefix == "Ka")
+            {
+                iss >> currentMaterial->ambient.x >> currentMaterial->ambient.y >> currentMaterial->ambient.z;
+            }
+            else if (prefix == "Kd")
+            {
+                iss >> currentMaterial->diffuse.x >> currentMaterial->diffuse.y >> currentMaterial->diffuse.z;
+            }
+            else if (prefix == "Ks")
+            {
+                iss >> currentMaterial->specular.x >> currentMaterial->specular.y >> currentMaterial->specular.z;
+            }
+            else if (prefix == "Ns")
+            {
+                iss >> currentMaterial->shininess;
+            }
+            else if (prefix == "map_Kd")
+            {
+                std::string texturePath;
+                iss >> texturePath;
+
+                // Check if path is absolute or relative
+                if (texturePath[0] == '/')
+                {
+                    // Absolute path
+                    currentMaterial->diffuseMap = new Texture(texturePath.c_str());
+                    std::cout << "  -> Loaded texture (absolute): " << texturePath << std::endl;
+                }
+                else
+                {
+                    // Relative path
+                    std::string fullPath = basePath + texturePath;
+                    currentMaterial->diffuseMap = new Texture(fullPath.c_str());
+                    std::cout << "  -> Loaded texture (relative): " << fullPath << std::endl;
+                }
+            }
+        }
+    }
+
+    file.close();
+    std::cout << "Loaded " << materials.size() << " materials from MTL file" << std::endl;
 }
 
 void Model::loadOBJ(const char *objFile)
@@ -50,11 +175,16 @@ void Model::loadOBJ(const char *objFile)
         return;
     }
 
+    // Extract base path from obj file path
+    std::string objPath(objFile);
+    std::string basePath = objPath.substr(0, objPath.find_last_of("/\\") + 1);
+
     std::vector<glm::vec3> temp_vertices;
     std::vector<glm::vec2> temp_uvs;
     std::vector<glm::vec3> temp_normals;
 
-    // Use a map to avoid duplicate vertices and enable proper normal interpolation
+    Mesh currentMesh;
+    Material *currentMaterial = nullptr;
     std::map<std::string, unsigned int> vertexMap;
 
     std::string line;
@@ -82,9 +212,49 @@ void Model::loadOBJ(const char *objFile)
             iss >> normal.x >> normal.y >> normal.z;
             temp_normals.push_back(normal);
         }
+        else if (prefix == "mtllib")
+        {
+            // MTL library reference
+            std::string mtlFileName;
+            iss >> mtlFileName;
+            std::string mtlPath = basePath + mtlFileName;
+            loadMTL(mtlPath, basePath);
+        }
+        else if (prefix == "usemtl")
+        {
+            // Material switch - save current mesh and start new one
+            std::string materialName;
+            iss >> materialName;
+
+            // Save previous mesh if it has data
+            if (!currentMesh.vertices.empty())
+            {
+                currentMesh.material = currentMaterial;
+                currentMesh.setupMesh();
+                meshes.push_back(currentMesh);
+                std::cout << "Created mesh with material: " << (currentMaterial ? currentMaterial->name : "none")
+                          << " (" << currentMesh.vertices.size() << " vertices, "
+                          << currentMesh.indices.size() / 3 << " faces)" << std::endl;
+            }
+
+            // Start new mesh with new material
+            currentMesh = Mesh();
+            vertexMap.clear();
+
+            if (materials.find(materialName) != materials.end())
+            {
+                currentMaterial = materials[materialName];
+                std::cout << "Switching to material: " << materialName << std::endl;
+            }
+            else
+            {
+                std::cout << "Warning: Material '" << materialName << "' not found!" << std::endl;
+                currentMaterial = nullptr;
+            }
+        }
         else if (prefix == "f")
         {
-            // Read all vertices in the face (could be triangle or quad)
+            // Read all vertices in the face
             std::vector<std::string> faceVertices;
             std::string vertexStr;
             while (iss >> vertexStr)
@@ -92,127 +262,65 @@ void Model::loadOBJ(const char *objFile)
                 faceVertices.push_back(vertexStr);
             }
 
-            // Handle both triangles (3 vertices) and quads (4 vertices)
+            // Handle triangles and quads
             if (faceVertices.size() == 3)
             {
-                // Triangle - process normally
+                // Triangle
                 for (const std::string &vertexStr : faceVertices)
                 {
-                    processVertex(vertexStr, temp_vertices, temp_uvs, temp_normals, vertexMap);
+                    processVertex(vertexStr, temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
                 }
             }
             else if (faceVertices.size() == 4)
             {
-                // Quad - triangulate into 2 triangles
-                // Triangle 1: vertices 0, 1, 2
-                processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap);
-                processVertex(faceVertices[1], temp_vertices, temp_uvs, temp_normals, vertexMap);
-                processVertex(faceVertices[2], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                // Quad - triangulate
+                processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
+                processVertex(faceVertices[1], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
+                processVertex(faceVertices[2], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
 
-                // Triangle 2: vertices 0, 2, 3
-                processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap);
-                processVertex(faceVertices[2], temp_vertices, temp_uvs, temp_normals, vertexMap);
-                processVertex(faceVertices[3], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
+                processVertex(faceVertices[2], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
+                processVertex(faceVertices[3], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
             }
             else if (faceVertices.size() > 4)
             {
-                // N-gon - triangulate using fan triangulation
+                // N-gon - fan triangulation
                 for (size_t i = 1; i < faceVertices.size() - 1; i++)
                 {
-                    processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap);
-                    processVertex(faceVertices[i], temp_vertices, temp_uvs, temp_normals, vertexMap);
-                    processVertex(faceVertices[i + 1], temp_vertices, temp_uvs, temp_normals, vertexMap);
+                    processVertex(faceVertices[0], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
+                    processVertex(faceVertices[i], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
+                    processVertex(faceVertices[i + 1], temp_vertices, temp_uvs, temp_normals, vertexMap, currentMesh);
                 }
             }
         }
     }
 
+    // Save final mesh
+    if (!currentMesh.vertices.empty())
+    {
+        currentMesh.material = currentMaterial;
+        currentMesh.setupMesh();
+        meshes.push_back(currentMesh);
+        std::cout << "Created mesh with material: " << (currentMaterial ? currentMaterial->name : "none")
+                  << " (" << currentMesh.vertices.size() << " vertices, "
+                  << currentMesh.indices.size() / 3 << " faces)" << std::endl;
+    }
+
     file.close();
 
-    std::cout << "Loaded model: " << objFile << " with " << vertices.size()
-              << " vertices and " << indices.size() / 3 << " faces" << std::endl;
+    std::cout << "Loaded model: " << objFile << " with " << meshes.size() << " submeshes" << std::endl;
 }
 
-void Model::setupModel()
-{
-    modelVAO.Bind();
-
-    modelVBO = new VBO((GLfloat *)vertices.data(), vertices.size() * sizeof(Vertex));
-    modelEBO = new EBO(indices.data(), indices.size() * sizeof(unsigned int));
-
-    // Position attribute (location = 0)
-    modelVAO.LinkVBOAttrib(*modelVBO, 0, 3, GL_FLOAT, sizeof(Vertex), (void *)0);
-    // Normal attribute (location = 1)
-    modelVAO.LinkVBOAttrib(*modelVBO, 1, 3, GL_FLOAT, sizeof(Vertex), (void *)(offsetof(Vertex, Normal)));
-    // Texture coordinate attribute (location = 2)
-    modelVAO.LinkVBOAttrib(*modelVBO, 2, 2, GL_FLOAT, sizeof(Vertex), (void *)(offsetof(Vertex, TexCoords)));
-
-    modelVAO.Unbind();
-    modelVBO->Unbind();
-    modelEBO->Unbind();
-}
-
-void Model::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection)
-{
-    shader.Activate();
-
-    // Pass matrices to shader
-    glUniformMatrix4fv(glGetUniformLocation(shader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
-    // Bind texture if available
-    if (texture != nullptr)
-    {
-        glActiveTexture(GL_TEXTURE0);
-        texture->Bind();
-        texture->texUnit(shader.ID, "tex0", 0);
-        glUniform1i(glGetUniformLocation(shader.ID, "hasTexture"), 1);
-    }
-    else
-    {
-        glUniform1i(glGetUniformLocation(shader.ID, "hasTexture"), 0);
-    }
-
-    modelVAO.Bind();
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-    modelVAO.Unbind();
-
-    if (texture != nullptr)
-    {
-        texture->Unbind();
-    }
-}
-
-void Model::Delete()
-{
-    modelVAO.Delete();
-    if (modelVBO)
-    {
-        modelVBO->Delete();
-        delete modelVBO;
-    }
-    if (modelEBO)
-    {
-        modelEBO->Delete();
-        delete modelEBO;
-    }
-    if (texture)
-    {
-        texture->Delete();
-        delete texture;
-        texture = nullptr;
-    }
-}
-
-void Model::processVertex(const std::string &vertexStr, const std::vector<glm::vec3> &temp_vertices, const std::vector<glm::vec2> &temp_uvs, const std::vector<glm::vec3> &temp_normals, std::map<std::string, unsigned int> &vertexMap)
+void Model::processVertex(const std::string &vertexStr, const std::vector<glm::vec3> &temp_vertices,
+                          const std::vector<glm::vec2> &temp_uvs, const std::vector<glm::vec3> &temp_normals,
+                          std::map<std::string, unsigned int> &vertexMap, Mesh &currentMesh)
 {
     // Check if we've already processed this exact vertex combination
     auto it = vertexMap.find(vertexStr);
     if (it != vertexMap.end())
     {
         // Reuse existing vertex
-        indices.push_back(it->second);
+        currentMesh.indices.push_back(it->second);
     }
     else
     {
@@ -243,11 +351,49 @@ void Model::processVertex(const std::string &vertexStr, const std::vector<glm::v
         if (normalIndex < temp_normals.size())
             vertex.Normal = glm::normalize(temp_normals[normalIndex]);
         else
-            vertex.Normal = glm::vec3(0.0f, 1.0f, 0.0f); // Default normal
+            vertex.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
 
-        vertices.push_back(vertex);
-        unsigned int newIndex = vertices.size() - 1;
+        currentMesh.vertices.push_back(vertex);
+        unsigned int newIndex = currentMesh.vertices.size() - 1;
         vertexMap[vertexStr] = newIndex;
-        indices.push_back(newIndex);
+        currentMesh.indices.push_back(newIndex);
     }
+}
+
+void Model::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection)
+{
+    shader.Activate();
+
+    // Pass matrices to shader
+    glUniformMatrix4fv(glGetUniformLocation(shader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+    // Draw all submeshes with their respective materials
+    for (auto &mesh : meshes)
+    {
+        mesh.Draw(shader);
+    }
+}
+
+void Model::Delete()
+{
+    // Delete all meshes
+    for (auto &mesh : meshes)
+    {
+        mesh.Delete();
+    }
+    meshes.clear();
+
+    // Delete all materials and their textures
+    for (auto &pair : materials)
+    {
+        if (pair.second->diffuseMap != nullptr)
+        {
+            pair.second->diffuseMap->Delete();
+            delete pair.second->diffuseMap;
+        }
+        delete pair.second;
+    }
+    materials.clear();
 }
