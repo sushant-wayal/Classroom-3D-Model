@@ -62,10 +62,15 @@ void main()
        shininess = 64.0;
        specularStrength = 0.6;
    } else {
-       // WALLS - Rough painted surface with texture variation
+
+    if (FragPos.z > 10.69 && FragPos.z < 10.75) { // For Green Board
+        shininess = 8.0;  // shiny surface
+        specularStrength = 0.2;  // little specular reflection
+    } else {
+        // WALLS - Rough painted surface with texture variation
        shininess = 4.0;  // Very rough surface
        specularStrength = 0.05;  // Almost no specular reflection
-       
+
        // Add subtle texture noise to walls for rough painted appearance
        vec2 texCoord = vec2(FragPos.x * 2.0, FragPos.z * 2.0);
        float noise = random(floor(texCoord * 50.0)) * 0.04 - 0.02;
@@ -74,6 +79,8 @@ void main()
        // Add very subtle bump variation
        float bumpNoise = random(floor(texCoord * 30.0)) * 0.03;
        baseColor = baseColor * (1.0 + bumpNoise);
+    }
+    
    }
    
    // Balanced ambient lighting - enough to see in corners but preserves blacks
