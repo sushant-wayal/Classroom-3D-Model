@@ -25,6 +25,7 @@ g++ -o main src/main.cpp \
     src/utils/Texture.cpp \
     src/utils/CeilingTiles.cpp \
     src/utils/LightPanels.cpp \
+    src/utils/TubeLight.cpp \
     src/utils/Windows.cpp \
     src/utils/RightWallWindows.cpp \
     src/utils/GreenBoard.cpp \

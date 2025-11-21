@@ -28,9 +28,6 @@ void CeilingTiles::generateCeilingTiles(float roomLength, float roomWidth, float
     glm::vec3 tileColor = glm::vec3(0.99f, 0.99f, 0.99f);   // Pure white tile surface (shiny plastic)
     glm::vec3 borderColor = glm::vec3(0.88f, 0.88f, 0.88f); // Light gray border/frame
 
-    std::cout << "Generating ceiling with " << rows << " rows and " << cols << " columns" << std::endl;
-    std::cout << "Tile dimensions: " << tileWidth << " x " << tileHeight << std::endl;
-
     // Generate tiles
     for (int row = 0; row < rows; row++)
     {
@@ -44,8 +41,6 @@ void CeilingTiles::generateCeilingTiles(float roomLength, float roomWidth, float
             addTile(tileCenter, tileWidth, tileHeight, roomHeight, borderWidth, extrusionDepth);
         }
     }
-
-    std::cout << "Generated " << vertices.size() << " vertices and " << indices.size() / 3 << " triangles for ceiling tiles" << std::endl;
 }
 
 void CeilingTiles::addTile(glm::vec3 center, float tileWidth, float tileHeight, float ceilingHeight, float borderWidth, float extrusionDepth)

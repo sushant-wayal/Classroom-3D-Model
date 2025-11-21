@@ -26,13 +26,6 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
 
     float frameDepth = 0.25f; // Frame extends 25cm from wall
 
-    std::cout << "\n=== Creating RECTANGULAR WINDOWS (BEVELED frames) ===" << std::endl;
-    std::cout << "Number of windows: " << numWindows << std::endl;
-    std::cout << "Window dimensions: " << windowWidth << "m x " << windowHeight << "m (RECTANGULAR)" << std::endl;
-    std::cout << "SPACING between windows: " << spacingBetweenWindows << "m" << std::endl;
-    std::cout << "Frame thickness: " << frameThickness << "m (BEVELED/SLOPED inward)" << std::endl;
-    std::cout << "Side margins: " << sideMargin << "m (frames stay inside room)" << std::endl;
-
     // Back wall position
     float backWallZ = -roomWidth / 2.0f;
 
@@ -40,9 +33,6 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
     float topMargin = 0.30f; // 30cm from ceiling (reduced from 60cm)
     float windowTopY = roomHeight - topMargin;
     float windowBottomY = windowTopY - windowHeight;
-
-    std::cout << "Top margin: " << topMargin << "m (REDUCED)" << std::endl;
-    std::cout << "Window position: " << windowBottomY << "m to " << windowTopY << "m" << std::endl;
 
     // Starting X position with margin
     float startX = -roomLength / 2.0f + sideMargin;
@@ -52,17 +42,12 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
     std::vector<GLfloat> frameVertices;
     std::vector<GLuint> frameIndices;
 
-    std::cout << "\nIndividual window positions:" << std::endl;
-
     // Create each window separately
     for (int i = 0; i < numWindows; i++)
     {
         // Calculate THIS window's position (with spacing)
         float windowLeftX = startX + i * (windowWidth + spacingBetweenWindows);
         float windowRightX = windowLeftX + windowWidth;
-
-        std::cout << "  Window " << (i + 1) << ": X[" << windowLeftX << " to " << windowRightX
-                  << "] = " << windowWidth << "m wide" << std::endl;
 
         // === GLASS - centered in opening ===
         float glassZ = backWallZ + frameDepth * 0.5f;
@@ -227,12 +212,6 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
     frameVAO.Unbind();
     frameVBO->Unbind();
     frameEBO->Unbind();
-
-    std::cout << "✓ RECTANGULAR windows - frames stay inside room!" << std::endl;
-    std::cout << "  Glass: " << numGlassIndices / 3 << " triangles" << std::endl;
-    std::cout << "  Frames: " << numFrameIndices / 3 << " triangles (THINNER 5cm)" << std::endl;
-    std::cout << "===========================================\n"
-              << std::endl;
 }
 
 void Windows::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection)

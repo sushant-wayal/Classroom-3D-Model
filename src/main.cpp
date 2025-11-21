@@ -1,6 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <iostream>
+#include <vector>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -15,6 +14,7 @@
 #include "Furniture.h"
 #include "CeilingTiles.h"
 #include "LightPanels.h"
+#include "TubeLight.h"
 #include "Windows.h"
 #include "RightWallWindows.h"
 #include "GreenBoard.h"
@@ -22,36 +22,48 @@
 #include "ProjectorScreen.h"
 #include "models/Model.h"
 
-glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f); // Left side view position
-glm::vec3 cameraFront = glm::vec3(1.0f, 0.0f, 0.0f); // Looking right towards the classroom
+// Camera state
+glm::vec3 cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
+glm::vec3 cameraFront = glm::vec3(1.0f, 0.0f, 0.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-float yaw = 0.0f;   // Facing right (positive X direction)
-float pitch = 0.0f; // Level horizon
+float yaw = 0.0f, pitch = 0.0f;
 float lastX = window::width / 2.0f;
 float lastY = window::height / 2.0f;
 bool firstMouse = true;
 
-// Timing
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
+float deltaTime = 0.0f, lastFrame = 0.0f;
 
-// Lighting - Two lights positioned at ceiling tiles
-// Room has 10 rows x 15 columns of tiles
-// Second row from FRONT wall, 4th tile from left (col 3, row 8)
-// Second row from FRONT wall, 8th tile from left (col 7, row 8)
-glm::vec3 lightPos1; // Will be calculated based on tile position
-glm::vec3 lightPos2; // Will be calculated based on tile position
+// Lighting
+glm::vec3 lightPos1, lightPos2;
 glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f);
 
 float fanRotationSpeed[furniture::fans];
+ProjectorScreen *projectorScreen = nullptr;
+
+void setCameraPreset(int preset)
+{
+    if (preset == 1)
+    {
+        cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
+        cameraFront = glm::vec3(1.0f, 0.0f, 0.0f);
+        yaw = pitch = 0.0f;
+    }
+    else if (preset == 2)
+    {
+        cameraPos = glm::vec3(10.0f, 3.0f, 2.0f);
+        cameraFront = glm::vec3(-1.0f, 0.0f, 0.0f);
+        yaw = 180.0f;
+        pitch = 0.0f;
+    }
+}
 
 void processInput(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    float cameraSpeed = 8.0f * deltaTime; // camera speed
+    float cameraSpeed = 8.0f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cameraPos += cameraSpeed * cameraFront;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -65,67 +77,27 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         cameraPos -= cameraSpeed * cameraUp;
 
-    // Camera preset positions
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-    {
-        // Left side view
-        cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
-        cameraFront = glm::vec3(1.0f, 0.0f, 0.0f);
-        yaw = 0.0f;
-        pitch = 0.0f;
-    }
+        setCameraPreset(1);
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-    {
-        // Right side view
-        cameraPos = glm::vec3(10.0f, 3.0f, 2.0f);
-        cameraFront = glm::vec3(-1.0f, 0.0f, 0.0f);
-        yaw = 180.0f;
-        pitch = 0.0f;
-    }
-
-    // Reset camera to left side view (which works well)
+        setCameraPreset(2);
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
-    {
-        cameraPos = glm::vec3(-10.0f, 3.0f, 2.0f);
-        cameraFront = glm::vec3(1.0f, 0.0f, 0.0f);
-        yaw = 0.0f;
-        pitch = 0.0f;
-    }
+        setCameraPreset(1);
 
     if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS)
-    {
-        fanRotationSpeed[0] = 2.0f; // Resume rotation
-    }
-
+        fanRotationSpeed[0] = 2.0f;
     if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS)
-    {
-        fanRotationSpeed[1] = 2.0f; // Resume rotation
-    }
-
+        fanRotationSpeed[1] = 2.0f;
     if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS)
-    {
-        fanRotationSpeed[0] = 0.0f; // Stop rotation
-    }
-
+        fanRotationSpeed[0] = 0.0f;
     if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS)
-    {
-        fanRotationSpeed[1] = 0.0f; // Stop rotation
-    }
+        fanRotationSpeed[1] = 0.0f;
 }
 
-// Forward declaration for projector screen pointer
-ProjectorScreen *projectorScreen = nullptr;
-
-// Keyboard callback for single key presses (toggle actions)
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-    if (action == GLFW_PRESS)
-    {
-        if (key == GLFW_KEY_P && projectorScreen != nullptr)
-        {
-            projectorScreen->ToggleScreen();
-        }
-    }
+    if (action == GLFW_PRESS && key == GLFW_KEY_P && projectorScreen)
+        projectorScreen->ToggleScreen();
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
@@ -137,22 +109,13 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos)
         firstMouse = false;
     }
 
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;
+    float xoffset = (xpos - lastX) * 0.1f;
+    float yoffset = (lastY - ypos) * 0.1f;
     lastX = xpos;
     lastY = ypos;
 
-    float sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
     yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
+    pitch = glm::clamp(pitch + yoffset, -89.0f, 89.0f);
 
     glm::vec3 front;
     front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
@@ -161,21 +124,136 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos)
     cameraFront = glm::normalize(front);
 }
 
+void addWallQuad(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
+                 unsigned int &idx, float x1, float y1, float z1, float x2, float y2, float z2,
+                 float r, float g, float b, float nx, float ny, float nz)
+{
+    vertices.insert(vertices.end(), {x1, y1, z1, r, g, b, nx, ny, nz,
+                                     x2, y1, z2, r, g, b, nx, ny, nz,
+                                     x2, y2, z2, r, g, b, nx, ny, nz,
+                                     x1, y2, z1, r, g, b, nx, ny, nz});
+    indices.insert(indices.end(), {idx, idx + 1, idx + 2, idx + 2, idx + 3, idx});
+    idx += 4;
+}
+
+void createBackWall(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
+                    float roomLength, float roomWidth, float roomHeight,
+                    float windowBottomY, float windowTopY, float windowWidth,
+                    float startX, float spacing, int numWindows)
+{
+    float backWallZ = -roomWidth / 2.0f;
+    float leftX = -roomLength / 2.0f, rightX = roomLength / 2.0f;
+    float wallR = 0.95f, wallG = 0.90f, wallB = 0.70f;
+    unsigned int idx = 0;
+
+    addWallQuad(vertices, indices, idx, leftX, 0.0f, backWallZ, rightX, windowBottomY, backWallZ,
+                wallR, wallG, wallB, 0.0f, 0.0f, 1.0f);
+    addWallQuad(vertices, indices, idx, leftX, windowTopY, backWallZ, rightX, roomHeight, backWallZ,
+                wallR, wallG, wallB, 0.0f, 0.0f, 1.0f);
+
+    for (int i = 0; i < numWindows; i++)
+    {
+        float winLeft = startX + i * (windowWidth + spacing);
+        float winRight = winLeft + windowWidth;
+
+        if (i == 0)
+            addWallQuad(vertices, indices, idx, leftX, windowBottomY, backWallZ, winLeft, windowTopY, backWallZ,
+                        wallR, wallG, wallB, 0.0f, 0.0f, 1.0f);
+
+        if (i < numWindows - 1)
+        {
+            float nextWinLeft = startX + (i + 1) * (windowWidth + spacing);
+            addWallQuad(vertices, indices, idx, winRight, windowBottomY, backWallZ, nextWinLeft, windowTopY, backWallZ,
+                        wallR, wallG, wallB, 0.0f, 0.0f, 1.0f);
+        }
+
+        if (i == numWindows - 1)
+            addWallQuad(vertices, indices, idx, winRight, windowBottomY, backWallZ, rightX, windowTopY, backWallZ,
+                        wallR, wallG, wallB, 0.0f, 0.0f, 1.0f);
+    }
+}
+
+void createRightWall(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
+                     float roomLength, float roomWidth, float roomHeight,
+                     float windowBottomY, float windowTopY, float rightWindowWidth,
+                     float backMargin, float frontMargin, float spacing, float doorBackZ,
+                     float doorFrontZ, float doorTopY)
+{
+    float rightX = roomLength / 2.0f;
+    float backWallZ = -roomWidth / 2.0f, frontWallZ = roomWidth / 2.0f;
+    float wallR = 0.95f, wallG = 0.90f, wallB = 0.70f;
+    unsigned int idx = 0;
+
+    // Bottom sections with door hole
+    addWallQuad(vertices, indices, idx, rightX, 0.0f, backWallZ, rightX, windowBottomY, doorBackZ,
+                wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
+
+    if (doorTopY < windowBottomY)
+        addWallQuad(vertices, indices, idx, rightX, doorTopY, doorBackZ, rightX, windowBottomY, doorFrontZ,
+                    wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
+
+    addWallQuad(vertices, indices, idx, rightX, 0.0f, doorFrontZ, rightX, windowBottomY, frontWallZ,
+                wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
+
+    // Top section
+    addWallQuad(vertices, indices, idx, rightX, windowTopY, backWallZ, rightX, roomHeight, frontWallZ,
+                wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
+
+    // Window sections
+    int numBackWindows = 5, numFrontWindows = 1;
+    float backSectionStart = backWallZ + backMargin;
+    float frontSectionStart = frontWallZ - frontMargin - rightWindowWidth;
+
+    for (int i = 0; i < numBackWindows; i++)
+    {
+        float winBack = backSectionStart + i * (rightWindowWidth + spacing);
+        float winFront = winBack + rightWindowWidth;
+
+        if (i == 0)
+            addWallQuad(vertices, indices, idx, rightX, windowBottomY, backWallZ, rightX, windowTopY, winBack,
+                        wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
+
+        if (i < numBackWindows - 1)
+        {
+            float nextWinBack = backSectionStart + (i + 1) * (rightWindowWidth + spacing);
+            addWallQuad(vertices, indices, idx, rightX, windowBottomY, winFront, rightX, windowTopY, nextWinBack,
+                        wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
+        }
+
+        if (i == numBackWindows - 1)
+            addWallQuad(vertices, indices, idx, rightX, windowBottomY, winFront, rightX, windowTopY, frontSectionStart,
+                        wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
+    }
+
+    float winFront = frontSectionStart + rightWindowWidth;
+    addWallQuad(vertices, indices, idx, rightX, windowBottomY, winFront, rightX, windowTopY, frontWallZ,
+                wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
+}
+
+void setLightingUniforms(GLuint shaderID, const glm::vec3 &light1, const glm::vec3 &light2,
+                         const TubeLight &tubeLight, const glm::vec3 &color, const glm::vec3 *viewPos = nullptr)
+{
+    glUniform3fv(glGetUniformLocation(shaderID, "lightPos1"), 1, glm::value_ptr(light1));
+    glUniform3fv(glGetUniformLocation(shaderID, "lightPos2"), 1, glm::value_ptr(light2));
+    glUniform3fv(glGetUniformLocation(shaderID, "tubeCenter"), 1, glm::value_ptr(tubeLight.GetTubeCenter()));
+    glUniform3fv(glGetUniformLocation(shaderID, "tubeAxis"), 1, glm::value_ptr(tubeLight.GetTubeAxis()));
+    glUniform1f(glGetUniformLocation(shaderID, "tubeLength"), tubeLight.GetTubeLength());
+    glUniform1f(glGetUniformLocation(shaderID, "tubeRadius"), tubeLight.GetTubeRadius());
+    glUniform3fv(glGetUniformLocation(shaderID, "lightColor"), 1, glm::value_ptr(color));
+    if (viewPos)
+        glUniform3fv(glGetUniformLocation(shaderID, "viewPos"), 1, glm::value_ptr(*viewPos));
+}
+
 int main()
 {
     glfwInit();
-
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    // Keep only essential anti-aliasing for smooth edges
     glfwWindowHint(GLFW_SAMPLES, 4);
 
-    GLFWwindow *window = glfwCreateWindow(
-        window::width, window::height, window::title, NULL, NULL);
-
-    if (window == NULL)
+    GLFWwindow *window = glfwCreateWindow(window::width, window::height, window::title, NULL, NULL);
+    if (!window)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -187,7 +265,6 @@ int main()
     glfwSetKeyCallback(window, key_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // Initialize GLEW
     if (glewInit() != GLEW_OK)
     {
         std::cout << "Failed to initialize GLEW" << std::endl;
@@ -195,689 +272,242 @@ int main()
     }
 
     glEnable(GL_DEPTH_TEST);
-
     glEnable(GL_MULTISAMPLE);
 
     for (int i = 0; i < furniture::fans; i++)
-    {
         fanRotationSpeed[i] = 2.0f;
-    }
 
-    // Classroom dimensions (in meters, scaled for OpenGL)
-    float roomLength = room::length;
-    float roomWidth = room::width;
-    float roomHeight = room::height;
+    float roomLength = room::length, roomWidth = room::width, roomHeight = room::height;
 
-    // Calculate window parameters - MUST MATCH Windows.cpp exactly
-    float frameThicknessCalc = 0.05f;            // 5cm frame thickness (THINNER!)
-    float windowHeightCalc = roomHeight * 0.20f; // 20% height - SHORTER
-    float topMargin = 0.30f;                     // 30cm from ceiling (REDUCED from 60cm)
-    float windowTopY = roomHeight - topMargin;
-    float windowBottomY = windowTopY - windowHeightCalc;
+    // Window parameters
+    const float frameThickness = 0.05f;
+    const float windowHeight = roomHeight * 0.20f;
+    const float topMargin = 0.30f;
+    const float windowTopY = roomHeight - topMargin;
+    const float windowBottomY = windowTopY - windowHeight;
+    const float sideMargin = frameThickness + 0.05f;
+    const float windowSpacing = 0.50f;
+    const int numBackWindows = 8;
+    const float windowWidth = (roomLength - 2.0f * sideMargin - windowSpacing * (numBackWindows - 1)) / numBackWindows;
+    const float startX = -roomLength / 2.0f + sideMargin;
 
-    float sideMargin = frameThicknessCalc + 0.05f; // 10cm margin on each side (frames stay inside)
-    float spacingBetweenWindows = 0.50f;           // 50cm gap between windows
-    float totalAvailableLength = roomLength - (2.0f * sideMargin);
-    float totalSpacing = spacingBetweenWindows * (8 - 1); // 8 windows
-    float windowWidthCalc = (totalAvailableLength - totalSpacing) / 8;
-    float startX = -roomLength / 2.0f + sideMargin;
+    // Door parameters
+    const float doorHeight = 4.2f, doorWidth = 2.0f;
+    const float doorTopY = doorHeight;
+    const float frontWallZ = roomWidth / 2.0f;
+    const float doorCenterZ = frontWallZ - 2.5f;
+    const float doorBackZ = doorCenterZ - doorWidth / 2.0f;
+    const float doorFrontZ = doorCenterZ + doorWidth / 2.0f;
 
-    // Create back wall vertices with 8 INDIVIDUAL window holes
-    std::vector<GLfloat> backWallVertices;
-    std::vector<GLuint> backWallIndices;
+    // Create walls
+    std::vector<GLfloat> backWallVertices, rightWallVertices;
+    std::vector<GLuint> backWallIndices, rightWallIndices;
 
-    float backWallZ = -roomWidth / 2.0f;
-    float leftWallX = -roomLength / 2.0f;
-    float rightWallX = roomLength / 2.0f;
+    createBackWall(backWallVertices, backWallIndices, roomLength, roomWidth, roomHeight,
+                   windowBottomY, windowTopY, windowWidth, startX, windowSpacing, numBackWindows);
 
-    // Colors for wall
-    float wallR = 0.95f, wallG = 0.90f, wallB = 0.70f;
+    createRightWall(rightWallVertices, rightWallIndices, roomLength, roomWidth, roomHeight,
+                    windowBottomY, windowTopY, windowWidth, 0.5f, 0.5f, windowSpacing,
+                    doorBackZ, doorFrontZ, doorTopY);
 
-    unsigned int vertexIndex = 0;
-
-    // Bottom section (floor to window bottom) - SOLID WALL
-    backWallVertices.insert(backWallVertices.end(), {leftWallX, 0.0f, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                     rightWallX, 0.0f, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                     rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                     leftWallX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
-    backWallIndices.insert(backWallIndices.end(), {0, 1, 2, 2, 3, 0});
-    vertexIndex = 4;
-
-    // Top section (window top to ceiling) - SOLID WALL
-    backWallVertices.insert(backWallVertices.end(), {leftWallX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                     rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                     rightWallX, roomHeight, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                     leftWallX, roomHeight, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
-    backWallIndices.insert(backWallIndices.end(), {vertexIndex + 0, vertexIndex + 1, vertexIndex + 2,
-                                                   vertexIndex + 2, vertexIndex + 3, vertexIndex + 0});
-    vertexIndex += 4;
-
-    // Middle section - wall with 8 INDIVIDUAL window holes
-    // Create wall sections between and around windows
-    for (int i = 0; i < 8; i++)
-    {
-        float windowLeftX = startX + i * (windowWidthCalc + spacingBetweenWindows);
-        float windowRightX = windowLeftX + windowWidthCalc;
-
-        if (i == 0)
-        {
-            // Left edge wall section (from left wall to first window)
-            backWallVertices.insert(backWallVertices.end(), {leftWallX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             windowLeftX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             windowLeftX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             leftWallX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
-            backWallIndices.insert(backWallIndices.end(), {vertexIndex + 0, vertexIndex + 1, vertexIndex + 2,
-                                                           vertexIndex + 2, vertexIndex + 3, vertexIndex + 0});
-            vertexIndex += 4;
-        }
-
-        if (i < 7)
-        {
-            // Wall section BETWEEN this window and next window
-            float nextWindowLeftX = startX + (i + 1) * (windowWidthCalc + spacingBetweenWindows);
-
-            backWallVertices.insert(backWallVertices.end(), {windowRightX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             nextWindowLeftX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             nextWindowLeftX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             windowRightX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
-            backWallIndices.insert(backWallIndices.end(), {vertexIndex + 0, vertexIndex + 1, vertexIndex + 2,
-                                                           vertexIndex + 2, vertexIndex + 3, vertexIndex + 0});
-            vertexIndex += 4;
-        }
-
-        if (i == 7)
-        {
-            // Right edge wall section (from last window to right wall)
-            backWallVertices.insert(backWallVertices.end(), {windowRightX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f,
-                                                             windowRightX, windowTopY, backWallZ, wallR, wallG, wallB, 0.0f, 0.0f, 1.0f});
-            backWallIndices.insert(backWallIndices.end(), {vertexIndex + 0, vertexIndex + 1, vertexIndex + 2,
-                                                           vertexIndex + 2, vertexIndex + 3, vertexIndex + 0});
-            vertexIndex += 4;
-        }
-    }
-
-    // Vertices for classroom walls, floor, and ceiling with colors and normals
-    // Format: x, y, z, r, g, b, nx, ny, nz
     GLfloat vertices[] = {
-        // Floor (y = 0) - Shiny white tile
         -roomLength / 2, 0.0f, -roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
         roomLength / 2, 0.0f, -roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
         roomLength / 2, 0.0f, roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
         -roomLength / 2, 0.0f, roomWidth / 2, 0.98f, 0.98f, 0.98f, 0.0f, 1.0f, 0.0f,
 
-        // Front wall (z = roomWidth/2)
         -roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
         roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
         roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
         -roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 0.0f, 0.0f, -1.0f,
 
-        // Left wall (x = -roomLength/2)
         -roomLength / 2, 0.0f, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
         -roomLength / 2, 0.0f, roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
         -roomLength / 2, roomHeight, roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f,
         -roomLength / 2, roomHeight, -roomWidth / 2, 0.95f, 0.90f, 0.70f, 1.0f, 0.0f, 0.0f};
 
-    GLuint indices[] = {
-        // Floor
-        0, 1, 2, 2, 3, 0,
-        // Front wall
-        4, 6, 5, 6, 4, 7,
-        // Left wall
-        8, 10, 9, 10, 8, 11};
-    // Right wall REMOVED - created separately with window holes
+    GLuint indices[] = {0, 1, 2, 2, 3, 0, 4, 6, 5, 6, 4, 7, 8, 10, 9, 10, 8, 11};
 
-    // Create shader program for basic room
     Shader roomShader("shaders/default.vert", "shaders/default.frag");
-
-    // Create shader program for furniture with lighting
     Shader furnitureShader("shaders/texture.vert", "shaders/texture.frag");
 
-    // Create vertex array and buffers for room (floor and side walls)
     VAO roomVAO;
     roomVAO.Bind();
-
     VBO roomVBO(vertices, sizeof(vertices));
     EBO roomEBO(indices, sizeof(indices));
-
     roomVAO.LinkVBOAttrib(roomVBO, 0, 3, GL_FLOAT, 9 * sizeof(float), (void *)0);
     roomVAO.LinkVBOAttrib(roomVBO, 1, 3, GL_FLOAT, 9 * sizeof(float), (void *)(3 * sizeof(float)));
     roomVAO.LinkVBOAttrib(roomVBO, 2, 3, GL_FLOAT, 9 * sizeof(float), (void *)(6 * sizeof(float)));
-
     roomVAO.Unbind();
-    roomVBO.Unbind();
-    roomEBO.Unbind();
 
-    // Create VAO/VBO/EBO for back wall with 8 individual holes
     VAO backWallVAO;
     backWallVAO.Bind();
-
     VBO backWallVBO(backWallVertices.data(), backWallVertices.size() * sizeof(GLfloat));
     EBO backWallEBO(backWallIndices.data(), backWallIndices.size() * sizeof(GLuint));
-
     backWallVAO.LinkVBOAttrib(backWallVBO, 0, 3, GL_FLOAT, 9 * sizeof(float), (void *)0);
     backWallVAO.LinkVBOAttrib(backWallVBO, 1, 3, GL_FLOAT, 9 * sizeof(float), (void *)(3 * sizeof(float)));
     backWallVAO.LinkVBOAttrib(backWallVBO, 2, 3, GL_FLOAT, 9 * sizeof(float), (void *)(6 * sizeof(float)));
-
     backWallVAO.Unbind();
-    backWallVBO.Unbind();
-    backWallEBO.Unbind();
 
-    // Create right wall vertices with 6 INDIVIDUAL window holes (5 back + 1 front) + DOOR HOLE at door location only
-    std::vector<GLfloat> rightWallVertices;
-    std::vector<GLuint> rightWallIndices;
-
-    unsigned int rightVertexIndex = 0;
-    float frontWallZ = roomWidth / 2.0f;
-
-    // Right wall window parameters - same as back wall
-    float rightWindowWidth = windowWidthCalc; // Same width as back wall windows (2.7875m)
-    float backMarginRight = 0.5f;
-    float frontMarginRight = 0.5f;
-
-    // DOOR PARAMETERS - must match Door.cpp exactly
-    float doorHeight = 2.1f * 2.0f; // 4.2m height (2x bigger)
-    float doorWidth = 1.0f * 2.0f;  // 2.0m width (2x bigger)
-    float doorBottomY = 0.0f;
-    float doorTopY = doorBottomY + doorHeight;
-
-    // Door position - towards front
-    float doorCenterZ = frontWallZ - frontMarginRight - 2.0f;
-    float doorBackZ = doorCenterZ - doorWidth / 2.0f;
-    float doorFrontZ = doorCenterZ + doorWidth / 2.0f;
-
-    std::cout << "\n=== Creating RIGHT WALL with DOOR HOLE (keeping windows intact) ===" << std::endl;
-    std::cout << "Door hole at Z: " << doorBackZ << "m to " << doorFrontZ << "m, Y: 0m to " << doorTopY << "m" << std::endl;
-
-    // BACK SECTION: 5 windows
-    int numBackWindows = 5;
-    float backSectionStart = backWallZ + backMarginRight;
-    float backSectionLength = numBackWindows * rightWindowWidth + (numBackWindows - 1) * spacingBetweenWindows;
-
-    // FRONT SECTION: 1 window
-    int numFrontWindows = 1;
-    float frontSectionEnd = frontWallZ - frontMarginRight;
-    float frontSectionLength = numFrontWindows * rightWindowWidth;
-    float frontSectionStart = frontSectionEnd - frontSectionLength;
-
-    // Bottom section (floor to window bottom) - WITH DOOR HOLE
-    // Part 1: From back wall to door
-    rightWallVertices.insert(rightWallVertices.end(), {rightWallX, 0.0f, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, 0.0f, doorBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowBottomY, doorBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
-    rightWallIndices.insert(rightWallIndices.end(), {0, 1, 2, 2, 3, 0});
-    rightVertexIndex = 4;
-
-    // Part 2: Above door (from door top to window bottom) - only if door is shorter than window bottom
-    if (doorTopY < windowBottomY)
-    {
-        rightWallVertices.insert(rightWallVertices.end(), {rightWallX, doorTopY, doorBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                           rightWallX, doorTopY, doorFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                           rightWallX, windowBottomY, doorFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                           rightWallX, windowBottomY, doorBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
-        rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
-                                                         rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
-        rightVertexIndex += 4;
-    }
-
-    // Part 3: From door to front wall
-    rightWallVertices.insert(rightWallVertices.end(), {rightWallX, 0.0f, doorFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, 0.0f, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowBottomY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowBottomY, doorFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
-    rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
-                                                     rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
-    rightVertexIndex += 4;
-
-    // Top section (window top to ceiling) - SOLID WALL (NO DOOR HOLE HERE)
-    rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowTopY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, roomHeight, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, roomHeight, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
-    rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
-                                                     rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
-    rightVertexIndex += 4;
-
-    // Middle section - wall with 6 INDIVIDUAL window holes (KEEP ALL WINDOWS!)
-    // BACK SECTION: Create wall sections for 5 windows
-    for (int i = 0; i < numBackWindows; i++)
-    {
-        float windowBackZ = backSectionStart + i * (rightWindowWidth + spacingBetweenWindows);
-        float windowFrontZ = windowBackZ + rightWindowWidth;
-
-        if (i == 0)
-        {
-            // Back edge wall section (from back wall to first window)
-            rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowBottomY, windowBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowTopY, windowBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowTopY, backWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
-            rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
-                                                             rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
-            rightVertexIndex += 4;
-        }
-
-        if (i < numBackWindows - 1)
-        {
-            // Wall section BETWEEN this window and next window in back section
-            float nextWindowBackZ = backSectionStart + (i + 1) * (rightWindowWidth + spacingBetweenWindows);
-
-            rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowBottomY, nextWindowBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowTopY, nextWindowBackZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowTopY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
-            rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
-                                                             rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
-            rightVertexIndex += 4;
-        }
-
-        if (i == numBackWindows - 1)
-        {
-            // Large GAP section between back section and front section
-            rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowBottomY, frontSectionStart, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowTopY, frontSectionStart, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                               rightWallX, windowTopY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
-            rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
-                                                             rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
-            rightVertexIndex += 4;
-        }
-    }
-
-    // FRONT SECTION: Create wall section for 1 window
-    float windowBackZ = frontSectionStart;
-    float windowFrontZ = windowBackZ + rightWindowWidth;
-
-    // Front edge wall section (from last window to front wall)
-    rightWallVertices.insert(rightWallVertices.end(), {rightWallX, windowBottomY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowBottomY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowTopY, frontWallZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f,
-                                                       rightWallX, windowTopY, windowFrontZ, wallR, wallG, wallB, -1.0f, 0.0f, 0.0f});
-    rightWallIndices.insert(rightWallIndices.end(), {rightVertexIndex + 0, rightVertexIndex + 1, rightVertexIndex + 2,
-                                                     rightVertexIndex + 2, rightVertexIndex + 3, rightVertexIndex + 0});
-    rightVertexIndex += 4;
-
-    std::cout << "✓ Right wall created with door hole at floor level only (windows intact)!" << std::endl;
-    std::cout << "===========================================\n"
-              << std::endl;
-
-    // Create VAO/VBO/EBO for right wall with 6 window holes + 1 door hole
     VAO rightWallVAO;
     rightWallVAO.Bind();
-
     VBO rightWallVBO(rightWallVertices.data(), rightWallVertices.size() * sizeof(GLfloat));
     EBO rightWallEBO(rightWallIndices.data(), rightWallIndices.size() * sizeof(GLuint));
-
     rightWallVAO.LinkVBOAttrib(rightWallVBO, 0, 3, GL_FLOAT, 9 * sizeof(float), (void *)0);
     rightWallVAO.LinkVBOAttrib(rightWallVBO, 1, 3, GL_FLOAT, 9 * sizeof(float), (void *)(3 * sizeof(float)));
     rightWallVAO.LinkVBOAttrib(rightWallVBO, 2, 3, GL_FLOAT, 9 * sizeof(float), (void *)(6 * sizeof(float)));
-
     rightWallVAO.Unbind();
-    rightWallVBO.Unbind();
-    rightWallEBO.Unbind();
 
-    // Create furniture pieces - Simple texture application
-    std::cout << "Loading custom Blender models..." << std::endl;
-
-    // Load custom desk model with texture from MTL file
+    // Load models
     Model customDesk("models/desk.obj");
-    std::cout << "Custom desk model loaded with texture from MTL file!" << std::endl;
-
     Model customFan("models/classroom_fan.obj");
-    std::cout << "Custom Fan Model loaded successfully!" << std::endl;
-
-    // Load custom podium model with materials from MTL file
     Model customPodium("models/podium.obj");
-    std::cout << "Custom Podium Model loaded with materials from MTL file!" << std::endl;
-
-    // Load custom projector model
     Model customProjector("models/classroom_projector.obj");
-    std::cout << "Custom Projector Model loaded successfully!" << std::endl;
-
-    // Load custom projector screen rod model
     Model projectorScreenRod("models/project_screen_rod.obj");
-    std::cout << "Projector Screen Rod Model loaded successfully!" << std::endl;
 
-    // Create realistic tiled ceiling with adjusted dimensions for classroom
-    std::cout << "Creating tiled ceiling..." << std::endl;
-    CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15); // 10 rows x 15 columns with larger tiles for 32m x 21.5m room
-    std::cout << "Tiled ceiling created successfully!" << std::endl;
-
-    // Create glowing light panels at specific tile positions
-    std::cout << "Creating glowing light panels..." << std::endl;
-    LightPanels lightPanels(roomLength, roomWidth, roomHeight, 10, 15, 8, 3, 8, 7); // Row 8, Col 3 and Col 7
-    std::cout << "Light panels created successfully!" << std::endl;
-
-    // Calculate light positions based on ceiling tile grid
-    // Ceiling has 10 rows x 15 columns
-    // Second row from FRONT wall (row index 8), 4th tile from left (col index 3)
-    // Second row from FRONT wall (row index 8), 8th tile from left (col index 7)
-    int ceilingRows = 10;
-    int ceilingCols = 15;
-    float tileWidth = roomLength / ceilingCols;
-    float tileHeight = roomWidth / ceilingRows;
-
-    // Calculate center of tile at row 8 (2nd from front), col 3 (4th from left)
-    float light1X = -roomLength / 2.0f + (3 + 0.5f) * tileWidth;
-    float light1Z = -roomWidth / 2.0f + (8 + 0.5f) * tileHeight; // Row 8 = 2nd from front
-    float lightY = roomHeight - 0.3f;                            // Just below ceiling (was 0.5f)
-    lightPos1 = glm::vec3(light1X, lightY, light1Z);
-
-    // Calculate center of tile at row 8 (2nd from front), col 7 (8th from left)
-    float light2X = -roomLength / 2.0f + (7 + 0.5f) * tileWidth;
-    float light2Z = -roomWidth / 2.0f + (8 + 0.5f) * tileHeight; // Row 8 = 2nd from front
-    lightPos2 = glm::vec3(light2X, lightY, light2Z);
-
-    std::cout << "\n=== LIGHT POSITIONS ===" << std::endl;
-    std::cout << "Light 1 (2nd row from front, 4th tile): (" << light1X << ", " << lightY << ", " << light1Z << ")" << std::endl;
-    std::cout << "Light 2 (2nd row from front, 8th tile): (" << light2X << ", " << lightY << ", " << light2Z << ")" << std::endl;
-    std::cout << "========================\n"
-              << std::endl;
-
-    // Create windows on back wall with transparent glass and white plastic frames
-    std::cout << "Creating back wall windows..." << std::endl;
-    Windows backWallWindows(roomLength, roomWidth, roomHeight, 8); // 8 windows on back wall
-    std::cout << "Back wall windows created successfully!" << std::endl;
-
-    // Create windows on right wall with 6 windows (5 back + 1 front sections)
-    std::cout << "Creating right wall windows..." << std::endl;
-    RightWallWindows rightWallWindows(roomLength, roomWidth, roomHeight); // 6 windows on right wall
-    std::cout << "Right wall windows created successfully!" << std::endl;
-
-    // Create green boards on front wall
-    std::cout << "Creating green boards on front wall..." << std::endl;
+    CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15);
+    LightPanels lightPanels(roomLength, roomWidth, roomHeight, 10, 15, 8, 3, 8, 7);
+    TubeLight tubeLight(roomLength, roomWidth, roomHeight);
+    Windows backWallWindows(roomLength, roomWidth, roomHeight, 8);
+    RightWallWindows rightWallWindows(roomLength, roomWidth, roomHeight);
     GreenBoard greenBoards(roomLength, roomWidth, roomHeight);
-    std::cout << "Green boards created successfully!" << std::endl;
-
-    // Create entrance door on right wall
-    std::cout << "Creating entrance door on right wall..." << std::endl;
     Door entranceDoor(roomLength, roomWidth, roomHeight);
-    std::cout << "Entrance door created successfully!" << std::endl;
-
-    // Create interactive projector screen above green boards
-    std::cout << "Creating interactive projector screen..." << std::endl;
     projectorScreen = new ProjectorScreen(roomLength, roomWidth, roomHeight);
-    std::cout << "Projector screen created successfully! Press 'P' to toggle dropdown/rollup!" << std::endl;
 
-    std::cout << "All furniture loaded successfully!" << std::endl;
+    // Calculate light positions
+    const float tileWidth = roomLength / 15;
+    const float tileHeight = roomWidth / 10;
+    const float lightY = roomHeight - 0.3f;
+    lightPos1 = glm::vec3(-roomLength / 2.0f + 3.5f * tileWidth, lightY, -roomWidth / 2.0f + 8.5f * tileHeight);
+    lightPos2 = glm::vec3(-roomLength / 2.0f + 7.5f * tileWidth, lightY, -roomWidth / 2.0f + 8.5f * tileHeight);
 
     // Render loop
     while (!glfwWindowShouldClose(window))
     {
-        // Per-frame time logic
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // Update projector screen animation
-        if (projectorScreen != nullptr)
-        {
+        if (projectorScreen)
             projectorScreen->Update(deltaTime);
-        }
 
-        // Input
         processInput(window);
 
-        // Render - Sky blue background (visible through transparent windows)
-        glClearColor(0.53f, 0.81f, 0.98f, 1.0f); // Beautiful light sky blue color
+        glClearColor(0.53f, 0.81f, 0.98f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Create transformations
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 projection = glm::perspective(glm::radians(60.0f),
-                                                (float)window::width / (float)window::height,
-                                                0.1f, 100.0f);
+                                                (float)window::width / window::height, 0.1f, 100.0f);
+        glm::mat4 model = glm::mat4(1.0f);
 
-        // Render room (walls, floor, ceiling)
+        // Render room
         roomShader.Activate();
-        glm::mat4 roomModel = glm::mat4(1.0f);
-
-        glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(roomModel));
+        glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
-        // Set lighting uniforms for room - TWO LIGHTS
-        glUniform3fv(glGetUniformLocation(roomShader.ID, "lightPos1"), 1, glm::value_ptr(lightPos1));
-        glUniform3fv(glGetUniformLocation(roomShader.ID, "lightPos2"), 1, glm::value_ptr(lightPos2));
-        glUniform3fv(glGetUniformLocation(roomShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
+        setLightingUniforms(roomShader.ID, lightPos1, lightPos2, tubeLight, lightColor);
 
         roomVAO.Bind();
-        glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(indices[0]), GL_UNSIGNED_INT, 0);
-
-        // Render back wall with 8 individual holes
+        glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
         backWallVAO.Bind();
         glDrawElements(GL_TRIANGLES, backWallIndices.size(), GL_UNSIGNED_INT, 0);
-
-        // Render right wall with 6 individual holes (5 back + 1 front)
         rightWallVAO.Bind();
         glDrawElements(GL_TRIANGLES, rightWallIndices.size(), GL_UNSIGNED_INT, 0);
 
-        // Render tiled ceiling
-        ceilingTiles.Draw(roomShader, roomModel, view, projection);
+        ceilingTiles.Draw(roomShader, model, view, projection);
+        lightPanels.Draw(model, view, projection);
+        tubeLight.Draw(model, view, projection);
+        backWallWindows.Draw(roomShader, model, view, projection);
+        rightWallWindows.Draw(roomShader, model, view, projection);
+        greenBoards.Draw(roomShader, model, view, projection);
+        if (projectorScreen)
+            projectorScreen->Draw(roomShader, model, view, projection);
+        entranceDoor.Draw(roomShader, model, view, projection);
 
-        // Render glowing light panels at tile positions (uses own emissive shader)
-        lightPanels.Draw(roomModel, view, projection);
-
-        // Render back wall windows with transparent glass and white frames
-        backWallWindows.Draw(roomShader, roomModel, view, projection);
-
-        // Render right wall windows with transparent glass and white frames
-        rightWallWindows.Draw(roomShader, roomModel, view, projection);
-
-        // Render green boards on front wall
-        greenBoards.Draw(roomShader, roomModel, view, projection);
-
-        // Render interactive projector screen (if extended)
-        if (projectorScreen != nullptr)
-        {
-            projectorScreen->Draw(roomShader, roomModel, view, projection);
-        }
-
-        // Render entrance door on right wall
-        entranceDoor.Draw(roomShader, roomModel, view, projection);
-
-        // Render furniture with lighting
+        // Render furniture
         furnitureShader.Activate();
-
-        // Set lighting uniforms - TWO LIGHTS
-        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightPos1"), 1, glm::value_ptr(lightPos1));
-        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightPos2"), 1, glm::value_ptr(lightPos2));
-        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
-        glUniform3fv(glGetUniformLocation(furnitureShader.ID, "viewPos"), 1, glm::value_ptr(cameraPos));
-
-        // Set white plastic material to 0 by default (not white plastic)
+        setLightingUniforms(furnitureShader.ID, lightPos1, lightPos2, tubeLight, lightColor, &cameraPos);
         glUniform1i(glGetUniformLocation(furnitureShader.ID, "isWhitePlastic"), 0);
 
-        // Scale factor to make desk proportional to classroom size
-        float deskScale = furniture::deskScale;
-        int noOfRows = furniture::rows;
-        int noOfCols = furniture::cols;
+        // Render desks
+        const float deskScale = furniture::deskScale;
+        const float deskYPos = 1.6f;
+        const float colSpacing = 5.0f, rowSpacing = 3.5f;
+        const float benchWidth = 1.8f;
+        const float backMargin = 2.5f;
+        const float startZ = -roomWidth / 2 + backMargin;
+        const float gridWidth = (furniture::cols - 1) * colSpacing + benchWidth;
+        const float sideSpace = (roomLength - gridWidth) / 2.0f;
+        const float startXDesk = -roomLength / 2 + sideSpace + benchWidth / 2.0f;
 
-        float deskYPos = 1.6f; // Significantly lifted - model's lowest Y is around -1.6, so this puts base at floor level
-
-        // FIXED spacing between benches - NO OVERLAP!
-        // Each scaled bench is approximately 1.8f wide and 1.6f deep (seat + backrest = 2m total)
-        float spacingBetweenCols = 5.0f; // SIGNIFICANTLY INCREASED to 5.0m spacing between column centers (MAXIMUM SEPARATION!)
-        float spacingBetweenRows = 3.5f; // Fixed 3.5m spacing between row centers (PERFECT - DO NOT CHANGE!)
-
-        // Actual bench dimensions (after scaling)
-        float benchWidth = 1.8f; // Actual width of each bench
-
-        // Calculate total space needed for benches
-        float totalBenchWidth = (noOfCols - 1) * spacingBetweenCols;
-        float totalBenchDepth = (noOfRows - 1) * spacingBetweenRows;
-
-        // Calculate total width occupied including the actual physical extent of benches
-        // The grid spans from leftmost bench edge to rightmost bench edge
-        float totalOccupiedWidth = totalBenchWidth + benchWidth;
-
-        // Back margin from back wall (extra space for backrest of last row)
-        float backMargin = 2.5f; // 2.5m to ensure backrests don't clip through wall
-
-        // Calculate starting positions to center benches with equal side spacing
-        // Z-axis: Start from back, leaving back margin, benches go towards front
-        float startZ = -roomWidth / 2 + backMargin;
-
-        // X-axis: Center the benches horizontally with equal side space
-        // Total occupied width includes spacing between benches PLUS the physical width of benches
-        float totalGridWidth = (noOfCols - 1) * spacingBetweenCols + benchWidth;
-        float sideSpace = (roomLength - totalGridWidth) / 2.0f;
-        // Start at left wall + side space + half bench width (since benches are placed at their centers)
-        float startX = -roomLength / 2 + sideSpace + (benchWidth / 2.0f);
-
-        for (int row = 0; row < noOfRows; row++)
+        for (int row = 0; row < furniture::rows; row++)
         {
-            for (int col = 0; col < noOfCols; col++)
+            for (int col = 0; col < furniture::cols; col++)
             {
                 glm::mat4 deskModel = glm::mat4(1.0f);
-
-                float x = startX + col * spacingBetweenCols;
-                float z = startZ + row * spacingBetweenRows;
-
-                deskModel = glm::translate(deskModel, glm::vec3(x, deskYPos, z));
-                deskModel = glm::scale(deskModel, glm::vec3(deskScale, deskScale, deskScale));
-                // Rotate 180 degrees around Y-axis to face the blackboard (front of classroom)
+                deskModel = glm::translate(deskModel, glm::vec3(startXDesk + col * colSpacing,
+                                                                deskYPos, startZ + row * rowSpacing));
+                deskModel = glm::scale(deskModel, glm::vec3(deskScale));
                 deskModel = glm::rotate(deskModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
                 customDesk.Draw(furnitureShader, deskModel, view, projection);
             }
         }
 
-        // Debug output to verify layout
-        if (glfwGetTime() < 1.0f)
-        { // Print once at startup
-            std::cout << "\n=== BENCH LAYOUT DEBUG ===" << std::endl;
-            std::cout << "Room Width (Z-axis): " << roomWidth << "m" << std::endl;
-            std::cout << "Back margin (for backrest): " << backMargin << "m" << std::endl;
-            std::cout << "ROW SPACING: " << spacingBetweenRows << "m (PERFECT - DO NOT CHANGE!)" << std::endl;
-            std::cout << "COLUMN SPACING: " << spacingBetweenCols << "m (SIGNIFICANTLY INCREASED!)" << std::endl;
-            std::cout << "Total bench grid width: " << totalBenchWidth << "m" << std::endl;
-            std::cout << "Total bench grid depth: " << totalBenchDepth << "m" << std::endl;
-            std::cout << "Benches start X: " << startX << "m (leftmost)" << std::endl;
-            std::cout << "Benches end X: " << (startX + totalBenchWidth) << "m (rightmost)" << std::endl;
-            std::cout << "Left wall at X: " << (-roomLength / 2) << "m" << std::endl;
-            std::cout << "Right wall at X: " << (roomLength / 2) << "m" << std::endl;
-            std::cout << "Benches start Z: " << startZ << "m" << std::endl;
-            std::cout << "Benches end Z (last row center): " << (startZ + totalBenchDepth) << "m" << std::endl;
-            std::cout << "Back wall at Z: " << (-roomWidth / 2) << "m" << std::endl;
-            std::cout << "Front wall at Z: " << (roomWidth / 2) << "m" << std::endl;
-            std::cout << "Front space: " << (roomWidth / 2 - (startZ + totalBenchDepth) - 1.0f) << "m" << std::endl;
-            std::cout << "========================\n"
-                      << std::endl;
-        }
-
-        float fanScale = furniture::fanScale;
-        int noOfFans = furniture::fans;
-        int fanRows = furniture::fanRows;
-        int fanCols = furniture::fanCols;
-
-        float fanYPos = roomHeight - 1.2f;
-
-        // Calculate spacing for 2x3 fan grid
-        float fanSpacingX = roomLength * 0.7f / (fanCols - 1); // Use 70% of room length
-        float fanSpacingZ = roomWidth * 0.6f / (fanRows - 1);  // Use 60% of room width
-        float fanStartX = -(roomLength * 0.35f);               // Center the grid
-        float fanStartZ = -(roomWidth * 0.3f);                 // Center the grid
-
-        float fanRotation[noOfFans];
-        for (int i = 0; i < noOfFans; i++)
-        {
-            fanRotation[i] = fmod(glfwGetTime() * fanRotationSpeed[i] * 360.0f + i * 45.0f, 360.0f);
-        }
+        // Render fans
+        const float fanScale = furniture::fanScale;
+        const float fanYPos = roomHeight - 1.2f;
+        const float fanSpacingX = roomLength * 0.7f / (furniture::fanCols - 1);
+        const float fanSpacingZ = roomWidth * 0.6f / (furniture::fanRows - 1);
+        const float fanStartX = -roomLength * 0.35f;
+        const float fanStartZ = -roomWidth * 0.3f;
 
         int fanIndex = 0;
-        for (int row = 0; row < fanRows; row++)
+        for (int row = 0; row < furniture::fanRows; row++)
         {
-            for (int col = 0; col < fanCols; col++)
+            for (int col = 0; col < furniture::fanCols; col++)
             {
+                float rotation = fmod(glfwGetTime() * fanRotationSpeed[fanIndex] * 360.0f + fanIndex * 45.0f, 360.0f);
                 glm::mat4 fanModel = glm::mat4(1.0f);
-
-                float x = fanStartX + col * fanSpacingX;
-                float z = fanStartZ + row * fanSpacingZ;
-
-                fanModel = glm::translate(fanModel, glm::vec3(x, fanYPos, z));
-                fanModel = glm::scale(fanModel, glm::vec3(fanScale, fanScale, fanScale));
-                // Add rotation around Y-axis (vertical) for fan blades
-                fanModel = glm::rotate(fanModel, glm::radians(fanRotation[fanIndex]), glm::vec3(0.0f, 1.0f, 0.0f));
-
+                fanModel = glm::translate(fanModel, glm::vec3(fanStartX + col * fanSpacingX,
+                                                              fanYPos, fanStartZ + row * fanSpacingZ));
+                fanModel = glm::scale(fanModel, glm::vec3(fanScale));
+                fanModel = glm::rotate(fanModel, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
                 customFan.Draw(furnitureShader, fanModel, view, projection);
                 fanIndex++;
             }
         }
 
-        // Render podium in front of class near the right side
+        // Render podium
         glm::mat4 podiumModel = glm::mat4(1.0f);
-
-        // Position the podium in front of the class, near the right side
-        // X position: towards the right side of the room (positive X)
-        // Y position: adjusted to just touch the floor (not floating, not below)
-        // Z position: in the front area (positive Z, near front wall)
-        float podiumX = roomLength / 2 - 5.5f; // 5.5m from right wall
-        float podiumY = 1.35f;                 // Lowered to 1.35m - should just touch the floor perfectly
-        float podiumZ = roomWidth / 2 - 2.0f;  // 2m from front wall
-        float podiumScale = 1.2f;              // Scale to appropriate size for classroom
-
-        podiumModel = glm::translate(podiumModel, glm::vec3(podiumX, podiumY, podiumZ));
-        podiumModel = glm::scale(podiumModel, glm::vec3(podiumScale, podiumScale, podiumScale));
-        // Rotate 90 degrees (positive) to face the back wall (negative Z direction where benches are)
+        podiumModel = glm::translate(podiumModel, glm::vec3(roomLength / 2 - 5.5f, 1.35f, roomWidth / 2 - 2.0f));
+        podiumModel = glm::scale(podiumModel, glm::vec3(1.2f));
         podiumModel = glm::rotate(podiumModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
         customPodium.Draw(furnitureShader, podiumModel, view, projection);
 
-        // Render projector at exact center of ceiling, facing front wall
-        // Set white plastic material for projector
+        // Render projector
         glUniform1i(glGetUniformLocation(furnitureShader.ID, "isWhitePlastic"), 1);
-
         glm::mat4 projectorModel = glm::mat4(1.0f);
-
-        // Position at exact center of room (X=0, Z=0)
-        // Y position: adjusted so rod top touches ceiling, entire rod and projector hang below
-        float projectorX = 0.0f;              // Exact center horizontally
-        float projectorY = roomHeight - 2.2f; // At ceiling level (rod top touches ceiling)
-        float projectorZ = 0.0f;              // Exact center depth-wise
-        float projectorScale = 0.3f;          // Scaled down significantly (was 1.0f)
-
-        projectorModel = glm::translate(projectorModel, glm::vec3(projectorX, projectorY, projectorZ));
-        projectorModel = glm::scale(projectorModel, glm::vec3(projectorScale, projectorScale, projectorScale));
-        // Rotate 90 degrees to face the front wall (positive Z direction)
-        // Since it's currently facing right wall, rotate 90 degrees counterclockwise
+        projectorModel = glm::translate(projectorModel, glm::vec3(0.0f, roomHeight - 2.2f, 0.0f));
+        projectorModel = glm::scale(projectorModel, glm::vec3(0.3f));
         projectorModel = glm::rotate(projectorModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
         customProjector.Draw(furnitureShader, projectorModel, view, projection);
 
-        // Render projector screen rod above green boards on front wall
-        // Reset white plastic material to 0 for screen rod (use default material)
+        // Render screen rod
         glUniform1i(glGetUniformLocation(furnitureShader.ID, "isWhitePlastic"), 0);
-
-        glm::mat4 screenRodModel = glm::mat4(1.0f);
-
-        // Position centered horizontally on front wall, above the green boards
-        // Green boards are centered and have height of roomHeight * 0.35f
-        // Green boards are centered vertically at roomHeight / 2.0f
         float boardHeight = roomHeight * 0.35f;
         float boardTopY = roomHeight / 2.0f + boardHeight / 2.0f;
-
-        float screenRodX = 0.0f;               // Centered horizontally on front wall
-        float screenRodY = boardTopY + 0.3f;   // 30cm above the top of green boards
-        float screenRodZ = frontWallZ - 0.15f; // Just in front of the front wall (15cm)
-        float screenRodScale = 0.5f;           // Adjust scale as needed
-
-        screenRodModel = glm::translate(screenRodModel, glm::vec3(screenRodX, screenRodY, screenRodZ));
-        screenRodModel = glm::scale(screenRodModel, glm::vec3(screenRodScale, screenRodScale, screenRodScale));
-        // Rotate to align horizontally along the X-axis (rod runs left-right across the wall)
-        // Assuming the model's default orientation needs adjustment - rotate 90 degrees around Y-axis
+        glm::mat4 screenRodModel = glm::mat4(1.0f);
+        screenRodModel = glm::translate(screenRodModel, glm::vec3(0.0f, boardTopY + 0.3f, frontWallZ - 0.15f));
+        screenRodModel = glm::scale(screenRodModel, glm::vec3(0.5f));
         screenRodModel = glm::rotate(screenRodModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
         projectorScreenRod.Draw(furnitureShader, screenRodModel, view, projection);
 
-        // Swap buffers and poll IO events
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    // Clean up
+    // Cleanup
     roomVAO.Delete();
     roomVBO.Delete();
     roomEBO.Delete();
@@ -890,7 +520,6 @@ int main()
     roomShader.Delete();
     furnitureShader.Delete();
 
-    // Clean up furniture
     customDesk.Delete();
     customFan.Delete();
     customPodium.Delete();
@@ -898,16 +527,16 @@ int main()
     projectorScreenRod.Delete();
     ceilingTiles.Delete();
     lightPanels.Delete();
+    tubeLight.Delete();
     backWallWindows.Delete();
     rightWallWindows.Delete();
     greenBoards.Delete();
     entranceDoor.Delete();
 
-    if (projectorScreen != nullptr)
+    if (projectorScreen)
     {
         projectorScreen->Delete();
         delete projectorScreen;
-        projectorScreen = nullptr;
     }
 
     glfwDestroyWindow(window);

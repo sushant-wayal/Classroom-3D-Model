@@ -8,11 +8,42 @@ out vec4 FragColor;
 
 uniform vec3 lightPos1;
 uniform vec3 lightPos2;
+// Tube light geometry for area lighting
+uniform vec3 tubeCenter;
+uniform vec3 tubeAxis;
+uniform float tubeLength;
+uniform float tubeRadius;
 uniform vec3 lightColor;
 
 // Simple pseudo-random function for rough texture
 float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+// Calculate closest point on tube cylinder surface to fragment
+vec3 closestPointOnTube(vec3 fragPos, vec3 tubeCenter, vec3 tubeAxis, float tubeLength, float tubeRadius) {
+    vec3 toFrag = fragPos - tubeCenter;
+    float alongAxis = dot(toFrag, tubeAxis);
+    
+    // Clamp to tube length
+    float halfLength = tubeLength * 0.5;
+    alongAxis = clamp(alongAxis, -halfLength, halfLength);
+    
+    // Point on tube axis
+    vec3 pointOnAxis = tubeCenter + tubeAxis * alongAxis;
+    
+    // Direction from axis to fragment
+    vec3 radialDir = fragPos - pointOnAxis;
+    float radialDist = length(radialDir);
+    
+    // Project onto tube surface
+    if (radialDist > 0.001) {
+        radialDir = normalize(radialDir) * tubeRadius;
+    } else {
+        radialDir = vec3(tubeRadius, 0.0, 0.0);
+    }
+    
+    return pointOnAxis + radialDir;
 }
 
 void main()
@@ -52,34 +83,47 @@ void main()
    // Smooth diffuse lighting
    vec3 norm = normalize(Normal);
    
-   // Calculate lighting contribution from both lights with REDUCED ATTENUATION
+   // Calculate lighting contribution from ceiling panel lights + tube light array
    vec3 diffuse = vec3(0.0);
    vec3 specular = vec3(0.0);
    
-   // Light 1 - Reduced attenuation so light reaches farther
+   // Light 1 - Ceiling panel
    vec3 lightDir1 = normalize(lightPos1 - FragPos);
    float diff1 = max(dot(norm, lightDir1), 0.0);
    float distance1 = length(lightPos1 - FragPos);
-   // REDUCED attenuation - lights reach much farther into corners
    float attenuation1 = 1.0 / (1.0 + 0.045 * distance1 + 0.0075 * distance1 * distance1);
-   diffuse += diff1 * lightColor * attenuation1 * baseColor * 1.5;  // Increased intensity
+   diffuse += diff1 * lightColor * attenuation1 * baseColor * 1.5;
    
    vec3 viewDir = normalize(-FragPos);
    vec3 reflectDir1 = reflect(-lightDir1, norm);
    float spec1 = pow(max(dot(viewDir, reflectDir1), 0.0), shininess);
    specular += specularStrength * spec1 * lightColor * attenuation1;
    
-   // Light 2 - Reduced attenuation so light reaches farther
+   // Light 2 - Ceiling panel
    vec3 lightDir2 = normalize(lightPos2 - FragPos);
    float diff2 = max(dot(norm, lightDir2), 0.0);
    float distance2 = length(lightPos2 - FragPos);
-   // REDUCED attenuation - lights reach much farther into corners
    float attenuation2 = 1.0 / (1.0 + 0.045 * distance2 + 0.0075 * distance2 * distance2);
-   diffuse += diff2 * lightColor * attenuation2 * baseColor * 1.5;  // Increased intensity
+   diffuse += diff2 * lightColor * attenuation2 * baseColor * 1.5;
    
    vec3 reflectDir2 = reflect(-lightDir2, norm);
    float spec2 = pow(max(dot(viewDir, reflectDir2), 0.0), shininess);
    specular += specularStrength * spec2 * lightColor * attenuation2;
+   
+   // TUBE LIGHT - Area lighting from cylindrical surface
+   vec3 closestPoint = closestPointOnTube(FragPos, tubeCenter, tubeAxis, tubeLength, tubeRadius);
+   vec3 tubeLightDir = normalize(closestPoint - FragPos);
+   float tubeDiff = max(dot(norm, tubeLightDir), 0.0);
+   float tubeDistance = length(closestPoint - FragPos);
+   
+   // Stronger attenuation - light intensity reduces significantly with distance
+   // Using standard attenuation: 1 / (constant + linear*d + quadratic*d^2)
+   float tubeAttenuation = 1.0 / (1.0 + 0.09 * tubeDistance + 0.032 * tubeDistance * tubeDistance);
+   diffuse += tubeDiff * lightColor * tubeAttenuation * baseColor * 2.5;  // Very bright
+   
+   vec3 tubeReflectDir = reflect(-tubeLightDir, norm);
+   float tubeSpec = pow(max(dot(viewDir, tubeReflectDir), 0.0), shininess);
+   specular += specularStrength * tubeSpec * lightColor * tubeAttenuation * 1.5;
    
    vec3 result = ambient + diffuse + specular;
    
