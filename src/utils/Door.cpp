@@ -16,10 +16,6 @@ Door::Door(float roomLength, float roomWidth, float roomHeight)
 
     float frameDepth = 0.25f; // Frame extends 25cm from wall inward
 
-    std::cout << "\n=== Creating ENTRANCE DOOR on RIGHT WALL ===" << std::endl;
-    std::cout << "Door dimensions: " << doorWidth << "m x " << doorHeight << "m (2x ENLARGED)" << std::endl;
-    std::cout << "Frame thickness: " << frameThickness << "m" << std::endl;
-
     // Right wall position
     float rightWallX = roomLength / 2.0f;
 
@@ -37,10 +33,6 @@ Door::Door(float roomLength, float roomWidth, float roomHeight)
 
     float doorBackZ = doorCenterZ - doorWidth / 2.0f;
     float doorFrontZ = doorCenterZ + doorWidth / 2.0f;
-
-    std::cout << "Door position Z: " << doorBackZ << "m to " << doorFrontZ << "m" << std::endl;
-    std::cout << "Door SIGNIFICANTLY moved to FRONT (only 2.5m from front wall!)" << std::endl;
-    std::cout << "Front wall at Z: " << frontWallZ << "m" << std::endl;
 
     std::vector<GLfloat> doorVertices;
     std::vector<GLuint> doorIndices;
@@ -256,12 +248,6 @@ Door::Door(float roomLength, float roomWidth, float roomHeight)
     frameVAO.Unbind();
     frameVBO->Unbind();
     frameEBO->Unbind();
-
-    std::cout << "✓ Entrance door created successfully!" << std::endl;
-    std::cout << "  Door panel: " << numDoorIndices / 3 << " triangles" << std::endl;
-    std::cout << "  Frame: " << numFrameIndices / 3 << " triangles" << std::endl;
-    std::cout << "===========================================\n"
-              << std::endl;
 }
 
 void Door::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection)

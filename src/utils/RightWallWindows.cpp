@@ -16,11 +16,6 @@ RightWallWindows::RightWallWindows(float roomLength, float roomWidth, float room
 
     float frameDepth = 0.25f; // Frame extends 25cm from wall inward
 
-    std::cout << "\n=== Creating RIGHT WALL WINDOWS (BEVELED frames) ===" << std::endl;
-    std::cout << "Total windows: 6 (5 back section + 1 front section)" << std::endl;
-    std::cout << "Window dimensions: " << windowWidth << "m x " << windowHeight << "m (RECTANGULAR)" << std::endl;
-    std::cout << "Frame thickness: " << frameThickness << "m (BEVELED/SLOPED inward)" << std::endl;
-
     // Right wall position
     float rightWallX = roomLength / 2.0f;
 
@@ -28,8 +23,6 @@ RightWallWindows::RightWallWindows(float roomLength, float roomWidth, float room
     float topMargin = 0.30f; // 30cm from ceiling
     float windowTopY = roomHeight - topMargin;
     float windowBottomY = windowTopY - windowHeight;
-
-    std::cout << "Window Y position: " << windowBottomY << "m to " << windowTopY << "m" << std::endl;
 
     // Z-axis positioning along the right wall
     float backMargin = 0.5f;            // Start 0.5m from back wall
@@ -50,26 +43,14 @@ RightWallWindows::RightWallWindows(float roomLength, float roomWidth, float room
     // Calculate the gap between sections
     float gapBetweenSections = frontSectionStart - (backSectionStart + backSectionLength);
 
-    std::cout << "\nBACK SECTION (5 windows):" << std::endl;
-    std::cout << "  Start Z: " << backSectionStart << "m" << std::endl;
-    std::cout << "  End Z: " << (backSectionStart + backSectionLength) << "m" << std::endl;
-    std::cout << "\nFRONT SECTION (1 window):" << std::endl;
-    std::cout << "  Start Z: " << frontSectionStart << "m" << std::endl;
-    std::cout << "  End Z: " << frontSectionEnd << "m" << std::endl;
-    std::cout << "\nGAP between sections: " << gapBetweenSections << "m (SIGNIFICANT!)" << std::endl;
-
     std::vector<GLfloat> glassVertices;
     std::vector<GLuint> glassIndices;
     std::vector<GLfloat> frameVertices;
     std::vector<GLuint> frameIndices;
 
-    std::cout << "\nIndividual window positions:" << std::endl;
-
     // Lambda function to create a window at given Z position
     auto createWindow = [&](int windowNum, float windowBackZ, float windowFrontZ)
     {
-        std::cout << "  Window " << windowNum << ": Z[" << windowBackZ << " to " << windowFrontZ
-                  << "] = " << windowWidth << "m deep" << std::endl;
 
         // === GLASS - centered in opening ===
         float glassX = rightWallX - frameDepth * 0.5f;
@@ -251,12 +232,6 @@ RightWallWindows::RightWallWindows(float roomLength, float roomWidth, float room
     frameVAO.Unbind();
     frameVBO->Unbind();
     frameEBO->Unbind();
-
-    std::cout << "✓ RIGHT WALL windows created - 2 distinct sections!" << std::endl;
-    std::cout << "  Glass: " << numGlassIndices / 3 << " triangles" << std::endl;
-    std::cout << "  Frames: " << numFrameIndices / 3 << " triangles (BEVELED 5cm)" << std::endl;
-    std::cout << "===========================================\n"
-              << std::endl;
 }
 
 void RightWallWindows::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection)

@@ -21,8 +21,6 @@ void TubeLight::generateTubeLight(float roomLength, float roomWidth, float roomH
     vertices.clear();
     indices.clear();
 
-    std::cout << "Generating tube light on right side of ceiling..." << std::endl;
-
     // Position: Right side of ceiling, parallel to right wall, centered between front and back
     float tubeX = roomLength / 2.0f - 1.0f; // 1m from right wall
     float tubeY = roomHeight - 0.1f;        // Just below ceiling
@@ -36,14 +34,7 @@ void TubeLight::generateTubeLight(float roomLength, float roomWidth, float roomH
     tubeCenter = glm::vec3(tubeX, tubeY, tubeZ);
     tubeAxis = glm::vec3(0.0f, 0.0f, 1.0f); // Tube runs along Z-axis
 
-    std::cout << "Tube light position: (" << tubeX << ", " << tubeY << ", " << tubeZ << ")" << std::endl;
-    std::cout << "Tube light length: " << tubeLength << "m (parallel to right wall, REDUCED by 3x)" << std::endl;
-    std::cout << "Tube light radius: " << tubeRadius << "m" << std::endl;
-    std::cout << "Tube light will emit as area light source from entire surface" << std::endl;
-
     addTubeLightGeometry(tubeCenter, tubeLength, tubeRadius, roomHeight);
-
-    std::cout << "Generated " << vertices.size() << " vertices for tube light" << std::endl;
 }
 
 void TubeLight::addTubeLightGeometry(glm::vec3 center, float tubeLength, float tubeRadius, float ceilingHeight)

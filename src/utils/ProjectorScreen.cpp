@@ -44,18 +44,6 @@ ProjectorScreen::ProjectorScreen(float roomLength, float roomWidth, float roomHe
     this->targetExtension = 0.0f;
     this->animationSpeed = 1.5f;
 
-    std::cout << "\n=== Creating PROJECTOR SCREEN (Interactive) ===" << std::endl;
-    std::cout << "Rod model width: " << rodModelWidth << "m" << std::endl;
-    std::cout << "Rod scale in main.cpp: " << rodScaleInMain << std::endl;
-    std::cout << "Rod physical width: " << rodPhysicalWidth << "m" << std::endl;
-    std::cout << "Screen width: " << screenWidth << "m (95% of rod)" << std::endl;
-    std::cout << "Screen extends: 0.5m below green boards" << std::endl;
-    std::cout << "Max screen height: " << screenMaxHeight << "m" << std::endl;
-    std::cout << "Border width: " << borderWidth << "m (black borders on 3 sides)" << std::endl;
-    std::cout << "Screen starts rolled up. Press 'P' to toggle!" << std::endl;
-    std::cout << "===========================================\n"
-              << std::endl;
-
     UpdateScreenGeometry();
 }
 
@@ -208,8 +196,6 @@ void ProjectorScreen::ToggleScreen()
 {
     isDroppedDown = !isDroppedDown;
     targetExtension = isDroppedDown ? 1.0f : 0.0f;
-
-    std::cout << (isDroppedDown ? "Dropping down" : "Rolling up") << " projector screen..." << std::endl;
 }
 
 void ProjectorScreen::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection)

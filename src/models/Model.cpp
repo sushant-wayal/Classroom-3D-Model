@@ -232,9 +232,6 @@ void Model::loadOBJ(const char *objFile)
                 currentMesh.material = currentMaterial;
                 currentMesh.setupMesh();
                 meshes.push_back(currentMesh);
-                std::cout << "Created mesh with material: " << (currentMaterial ? currentMaterial->name : "none")
-                          << " (" << currentMesh.vertices.size() << " vertices, "
-                          << currentMesh.indices.size() / 3 << " faces)" << std::endl;
             }
 
             // Start new mesh with new material
@@ -244,7 +241,6 @@ void Model::loadOBJ(const char *objFile)
             if (materials.find(materialName) != materials.end())
             {
                 currentMaterial = materials[materialName];
-                std::cout << "Switching to material: " << materialName << std::endl;
             }
             else
             {
@@ -301,14 +297,9 @@ void Model::loadOBJ(const char *objFile)
         currentMesh.material = currentMaterial;
         currentMesh.setupMesh();
         meshes.push_back(currentMesh);
-        std::cout << "Created mesh with material: " << (currentMaterial ? currentMaterial->name : "none")
-                  << " (" << currentMesh.vertices.size() << " vertices, "
-                  << currentMesh.indices.size() / 3 << " faces)" << std::endl;
     }
 
     file.close();
-
-    std::cout << "Loaded model: " << objFile << " with " << meshes.size() << " submeshes" << std::endl;
 }
 
 void Model::processVertex(const std::string &vertexStr, const std::vector<glm::vec3> &temp_vertices,

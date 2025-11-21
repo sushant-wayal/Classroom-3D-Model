@@ -34,13 +34,6 @@ GreenBoard::GreenBoard(float roomLength, float roomWidth, float roomHeight)
     float boardBottomY = centerY - boardHeight / 2.0f;
     float boardTopY = centerY + boardHeight / 2.0f;
 
-    std::cout << "\n=== Creating GREEN BOARDS (with rounded corners) ===" << std::endl;
-    std::cout << "Number of boards: 2 (side-by-side)" << std::endl;
-    std::cout << "Each board dimensions: " << boardWidth << "m x " << boardHeight << "m" << std::endl;
-    std::cout << "Gap between boards: " << gapBetweenBoards << "m (prevents frame overlap)" << std::endl;
-    std::cout << "Total combined width: " << totalWidth << "m (REDUCED by 25%)" << std::endl;
-    std::cout << "Frame thickness: " << frameThickness << "m (shiny grayish metallic with rounded corners)" << std::endl;
-
     std::vector<GLfloat> boardVertices;
     std::vector<GLuint> boardIndices;
     std::vector<GLfloat> frameVertices;
@@ -353,12 +346,6 @@ GreenBoard::GreenBoard(float roomLength, float roomWidth, float roomHeight)
     frameVAO.Unbind();
     frameVBO->Unbind();
     frameEBO->Unbind();
-
-    std::cout << "✓ Green boards created with rounded corners!" << std::endl;
-    std::cout << "  Boards: " << numBoardIndices / 3 << " triangles (rough green texture)" << std::endl;
-    std::cout << "  Frames: " << numFrameIndices / 3 << " triangles (shiny metallic)" << std::endl;
-    std::cout << "===========================================\n"
-              << std::endl;
 }
 
 void GreenBoard::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection)
