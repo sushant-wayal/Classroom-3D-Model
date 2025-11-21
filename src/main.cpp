@@ -35,7 +35,11 @@ bool firstMouse = true;
 float deltaTime = 0.0f, lastFrame = 0.0f;
 
 // Lighting
-glm::vec3 lightPos1, lightPos2;
+glm::vec3 lightPos[ceilingTiles::numLights];
+int lightCoord[ceilingTiles::numLights][2] = {
+    {8, 3},
+    {8, 7}
+};
 glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 0.9f);
 
 float fanRotationSpeed[furniture::fans];
@@ -83,15 +87,6 @@ void processInput(GLFWwindow *window)
         setCameraPreset(2);
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
         setCameraPreset(1);
-
-    if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS)
-        fanRotationSpeed[0] = 2.0f;
-    if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS)
-        fanRotationSpeed[1] = 2.0f;
-    if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS)
-        fanRotationSpeed[0] = 0.0f;
-    if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS)
-        fanRotationSpeed[1] = 0.0f;
 }
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -230,11 +225,16 @@ void createRightWall(std::vector<GLfloat> &vertices, std::vector<GLuint> &indice
                 wallR, wallG, wallB, -1.0f, 0.0f, 0.0f);
 }
 
-void setLightingUniforms(GLuint shaderID, const glm::vec3 &light1, const glm::vec3 &light2,
+void setLightingUniforms(GLuint shaderID, const glm::vec3 *lights,
                          const TubeLight &tubeLight, const glm::vec3 &color, const glm::vec3 *viewPos = nullptr)
 {
-    glUniform3fv(glGetUniformLocation(shaderID, "lightPos1"), 1, glm::value_ptr(light1));
-    glUniform3fv(glGetUniformLocation(shaderID, "lightPos2"), 1, glm::value_ptr(light2));
+    // glUniform3fv(glGetUniformLocation(shaderID, "lightPos1"), 1, glm::value_ptr(light1));
+    // glUniform3fv(glGetUniformLocation(shaderID, "lightPos2"), 1, glm::value_ptr(light2));
+    for (int i = 0; i < ceilingTiles::numLights; i++)
+    {
+        std::string uniformName = "lightPos[" + std::to_string(i) + "]";
+        glUniform3fv(glGetUniformLocation(shaderID, uniformName.c_str()), 1, glm::value_ptr(lights[i]));
+    }
     glUniform3fv(glGetUniformLocation(shaderID, "tubeCenter"), 1, glm::value_ptr(tubeLight.GetTubeCenter()));
     glUniform3fv(glGetUniformLocation(shaderID, "tubeAxis"), 1, glm::value_ptr(tubeLight.GetTubeAxis()));
     glUniform1f(glGetUniformLocation(shaderID, "tubeLength"), tubeLight.GetTubeLength());
@@ -366,7 +366,12 @@ int main()
     Model projectorScreenRod("models/project_screen_rod.obj");
 
     CeilingTiles ceilingTiles(roomLength, roomWidth, roomHeight, 10, 15);
-    LightPanels lightPanels(roomLength, roomWidth, roomHeight, 10, 15, 8, 3, 8, 7);
+    LightPanelPositions lightPositions[ceilingTiles::numLights] = {
+        LightPanelPositions(lightCoord[0][0], lightCoord[0][1]),
+        LightPanelPositions(lightCoord[1][0], lightCoord[1][1])
+    };
+    
+    LightPanels lightPanels(roomLength, roomWidth, roomHeight, ceilingTiles::rows, ceilingTiles::cols, lightPositions, ceilingTiles::numLights);
     TubeLight tubeLight(roomLength, roomWidth, roomHeight);
     Windows backWallWindows(roomLength, roomWidth, roomHeight, 8);
     RightWallWindows rightWallWindows(roomLength, roomWidth, roomHeight);
@@ -378,8 +383,13 @@ int main()
     const float tileWidth = roomLength / 15;
     const float tileHeight = roomWidth / 10;
     const float lightY = roomHeight - 0.3f;
-    lightPos1 = glm::vec3(-roomLength / 2.0f + 3.5f * tileWidth, lightY, -roomWidth / 2.0f + 8.5f * tileHeight);
-    lightPos2 = glm::vec3(-roomLength / 2.0f + 7.5f * tileWidth, lightY, -roomWidth / 2.0f + 8.5f * tileHeight);
+    for (int i = 0; i < ceilingTiles::numLights; i++) {
+        int row = lightPositions[i].rows; // Changed from lightPositions[i].row to lightPositions[i].rows
+        int col = lightPositions[i].cols; // Changed from lightPositions[i].col to lightPositions[i].cols
+        float lightX = -roomLength / 2 + col * tileWidth + tileWidth / 2;
+        float lightZ = -roomWidth / 2 + row * tileHeight + tileHeight / 2;
+        lightPos[i] = glm::vec3(lightX, lightY, lightZ);
+    }
 
     // Render loop
     while (!glfwWindowShouldClose(window))
@@ -406,7 +416,8 @@ int main()
         glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(roomShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        setLightingUniforms(roomShader.ID, lightPos1, lightPos2, tubeLight, lightColor);
+        // setLightingUniforms(roomShader.ID, lightPos1, lightPos2, tubeLight, lightColor);
+        setLightingUniforms(roomShader.ID, lightPos, tubeLight, lightColor, &cameraPos);
 
         roomVAO.Bind();
         glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
@@ -427,7 +438,7 @@ int main()
 
         // Render furniture
         furnitureShader.Activate();
-        setLightingUniforms(furnitureShader.ID, lightPos1, lightPos2, tubeLight, lightColor, &cameraPos);
+        setLightingUniforms(furnitureShader.ID, lightPos, tubeLight, lightColor, &cameraPos);
         glUniform1i(glGetUniformLocation(furnitureShader.ID, "isWhitePlastic"), 0);
 
         // Render desks

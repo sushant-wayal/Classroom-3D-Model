@@ -5,8 +5,8 @@ in vec2 TexCoord;
 
 out vec4 FragColor;
 
-uniform vec3 lightPos1;
-uniform vec3 lightPos2;
+#define MAX_LIGHTS 2
+uniform vec3 lightPos[MAX_LIGHTS];
 // Tube light geometry for area lighting
 uniform vec3 tubeCenter;
 uniform vec3 tubeAxis;
@@ -78,27 +78,18 @@ void main()
         specularStrength = 0.2;
     }
     
-    // Light 1 - Ceiling panel
-    vec3 lightDir1 = normalize(lightPos1 - FragPos);
-    float diff1 = max(dot(norm, lightDir1), 0.0);
-    float distance1 = length(lightPos1 - FragPos);
-    float attenuation1 = 1.0 / (1.0 + 0.045 * distance1 + 0.0075 * distance1 * distance1);
-    diffuse += diff1 * lightColor * attenuation1 * 1.6;
-    
-    vec3 reflectDir1 = reflect(-lightDir1, norm);
-    float spec1 = pow(max(dot(viewDir, reflectDir1), 0.0), 32);
-    specular += specularStrength * spec1 * lightColor * attenuation1;
-    
-    // Light 2 - Ceiling panel
-    vec3 lightDir2 = normalize(lightPos2 - FragPos);
-    float diff2 = max(dot(norm, lightDir2), 0.0);
-    float distance2 = length(lightPos2 - FragPos);
-    float attenuation2 = 1.0 / (1.0 + 0.045 * distance2 + 0.0075 * distance2 * distance2);
-    diffuse += diff2 * lightColor * attenuation2 * 1.6;
-    
-    vec3 reflectDir2 = reflect(-lightDir2, norm);
-    float spec2 = pow(max(dot(viewDir, reflectDir2), 0.0), 32);
-    specular += specularStrength * spec2 * lightColor * attenuation2;
+    // Loop through all ceiling panel lights
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        vec3 lightDir = normalize(lightPos[i] - FragPos);
+        float diff = max(dot(norm, lightDir), 0.0);
+        float distance = length(lightPos[i] - FragPos);
+        float attenuation = 1.0 / (1.0 + 0.045 * distance + 0.0075 * distance * distance);
+        diffuse += diff * lightColor * attenuation * 1.6;
+        
+        vec3 reflectDir = reflect(-lightDir, norm);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+        specular += specularStrength * spec * lightColor * attenuation;
+    }
     
     // TUBE LIGHT - Area lighting from cylindrical surface
     vec3 closestPoint = closestPointOnTube(FragPos, tubeCenter, tubeAxis, tubeLength, tubeRadius);

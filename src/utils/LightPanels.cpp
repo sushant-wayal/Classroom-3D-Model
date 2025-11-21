@@ -2,8 +2,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
-LightPanels::LightPanels(float roomLength, float roomWidth, float roomHeight, int rows, int cols,
-                         int light1Row, int light1Col, int light2Row, int light2Col)
+LightPanels::LightPanels(float roomLength, float roomWidth, float roomHeight, int rows, int cols, LightPanelPositions lightsPos[], int numLights)
 {
     lightVBO = nullptr;
     lightEBO = nullptr;
@@ -11,13 +10,11 @@ LightPanels::LightPanels(float roomLength, float roomWidth, float roomHeight, in
     // Create dedicated emissive shader for self-glowing effect
     emissiveShader = new Shader("shaders/emissive.vert", "shaders/emissive.frag");
 
-    generateLightPanels(roomLength, roomWidth, roomHeight, rows, cols,
-                        light1Row, light1Col, light2Row, light2Col);
+    generateLightPanels(roomLength, roomWidth, roomHeight, rows, cols, lightsPos, numLights);
     setupLightPanels();
 }
 
-void LightPanels::generateLightPanels(float roomLength, float roomWidth, float roomHeight, int rows, int cols,
-                                      int light1Row, int light1Col, int light2Row, int light2Col)
+void LightPanels::generateLightPanels(float roomLength, float roomWidth, float roomHeight, int rows, int cols, LightPanelPositions lightsPos[], int numLights)
 {
     // Clear any existing data
     vertices.clear();
@@ -29,17 +26,21 @@ void LightPanels::generateLightPanels(float roomLength, float roomWidth, float r
 
     std::cout << "Generating glowing light panels at specified tile positions..." << std::endl;
 
-    // Generate Light Panel 1
-    float light1X = -roomLength / 2.0f + (light1Col + 0.5f) * tileWidth;
-    float light1Z = -roomWidth / 2.0f + (light1Row + 0.5f) * tileHeight;
-    glm::vec3 light1Center(light1X, roomHeight, light1Z);
-    addLightPanel(light1Center, tileWidth, tileHeight, roomHeight);
+    // Generate light panels based on provided positions
+    for (int i = 0; i < numLights; i++) {
+        int lightRow = lightsPos[i].rows;
+        int lightCol = lightsPos[i].cols;
+        float lightX = -roomLength / 2.0f + (lightCol + 0.5f) * tileWidth;
+        float lightZ = -roomWidth / 2.0f + (lightRow + 0.5f) * tileHeight;
+        glm::vec3 lightCenter(lightX, roomHeight, lightZ);
+        addLightPanel(lightCenter, tileWidth, tileHeight, roomHeight);
+    }
 
-    // Generate Light Panel 2
-    float light2X = -roomLength / 2.0f + (light2Col + 0.5f) * tileWidth;
-    float light2Z = -roomWidth / 2.0f + (light2Row + 0.5f) * tileHeight;
-    glm::vec3 light2Center(light2X, roomHeight, light2Z);
-    addLightPanel(light2Center, tileWidth, tileHeight, roomHeight);
+
+    std::cout << "Light positions generated:" << std::endl;
+    for (int i = 0; i < numLights; i++) {
+        std::cout << "Light " << i << ": (" << lightsPos[i].rows << ", " << lightsPos[i].cols << ")" << std::endl;
+    }
 
     std::cout << "Generated " << vertices.size() << " vertices for glowing light panels" << std::endl;
 }

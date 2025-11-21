@@ -24,3 +24,10 @@ namespace furniture
     static const int fanCols = 3;
     static const float fanScale = 1.0f;
 }
+
+namespace ceilingTiles
+{
+    static const int rows = 10;
+    static const int cols = 15;
+    static const int numLights = 2;
+}
