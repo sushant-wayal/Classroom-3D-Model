@@ -9,11 +9,10 @@ void Mesh::setupMesh()
     meshVBO = new VBO((GLfloat *)vertices.data(), vertices.size() * sizeof(Vertex));
     meshEBO = new EBO(indices.data(), indices.size() * sizeof(unsigned int));
 
-    // Position attribute (location = 0)
     meshVAO.LinkVBOAttrib(*meshVBO, 0, 3, GL_FLOAT, sizeof(Vertex), (void *)0);
-    // Normal attribute (location = 1)
+    
     meshVAO.LinkVBOAttrib(*meshVBO, 1, 3, GL_FLOAT, sizeof(Vertex), (void *)(offsetof(Vertex, Normal)));
-    // Texture coordinate attribute (location = 2)
+    
     meshVAO.LinkVBOAttrib(*meshVBO, 2, 2, GL_FLOAT, sizeof(Vertex), (void *)(offsetof(Vertex, TexCoords)));
 
     meshVAO.Unbind();
@@ -23,7 +22,6 @@ void Mesh::setupMesh()
 
 void Mesh::Draw(Shader &shader)
 {
-    // Bind material properties
     if (material)
     {
         if (material->diffuseMap != nullptr)
@@ -35,7 +33,7 @@ void Mesh::Draw(Shader &shader)
         }
         else
         {
-            // No texture, use material diffuse color
+
             glUniform1i(glGetUniformLocation(shader.ID, "hasTexture"), 0);
             glUniform3fv(glGetUniformLocation(shader.ID, "materialDiffuse"), 1, glm::value_ptr(material->diffuse));
         }

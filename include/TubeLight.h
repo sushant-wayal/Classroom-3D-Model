@@ -29,7 +29,6 @@ public:
     void Draw(glm::mat4 model, glm::mat4 view, glm::mat4 projection);
     void Delete();
 
-    // Get tube geometry for area lighting calculations
     glm::vec3 GetTubeCenter() const { return tubeCenter; }
     glm::vec3 GetTubeAxis() const { return tubeAxis; }
     float GetTubeLength() const { return tubeLength; }

@@ -23,7 +23,6 @@ public:
     std::vector<unsigned int> indices;
     VAO furnitureVAO;
 
-    // Static methods to create different furniture pieces
     static Furniture createDesk(float width, float height, float depth);
     static Furniture createChair(float width, float height, float depth);
     static Furniture createPodium(float width, float height, float depth);

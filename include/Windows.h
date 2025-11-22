@@ -16,7 +16,6 @@ class Windows
 public:
     Windows(float roomLength, float roomWidth, float roomHeight, int numWindows = 8);
 
-    // Draw windows with frames and glass
     void Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection);
 
     void Delete();

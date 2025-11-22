@@ -24,7 +24,7 @@ struct Material
     Texture *diffuseTexture;
     bool useTexture;
 
-    // Constructor for textured material
+    
     Material(MaterialType matType, const char *texturePath)
     {
         type = matType;
@@ -33,7 +33,6 @@ struct Material
         setupMaterialProperties();
     }
 
-    // Constructor for solid color material
     Material(MaterialType matType, glm::vec3 color)
     {
         type = matType;
@@ -43,7 +42,6 @@ struct Material
         setupMaterialProperties();
     }
 
-    // Default constructor
     Material()
     {
         type = MATERIAL_WOOD;

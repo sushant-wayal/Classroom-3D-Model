@@ -16,19 +16,15 @@ void VAO::LinkVBOAttrib(VBO &VBO, GLuint layout, GLuint numComponents, GLenum ty
 void VAO::LinkAttribWithAlpha(VBO &VBO)
 {
     VBO.Bind();
-    // Position attribute (location = 0)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    // Color attribute (location = 1)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void *)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    // Normal attribute (location = 2)
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void *)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
-    // Alpha attribute (location = 3)
     glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void *)(9 * sizeof(float)));
     glEnableVertexAttribArray(3);
 

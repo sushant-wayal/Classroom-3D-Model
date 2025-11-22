@@ -4,41 +4,29 @@
 
 ProjectorScreen::ProjectorScreen(float roomLength, float roomWidth, float roomHeight)
 {
-    // Initialize pointers
     screenVBO = nullptr;
     screenEBO = nullptr;
 
-    // ROD CALCULATION - SIMPLE AND CORRECT
-    // Rod model spans from -8.098977 to 8.098977 = 16.2m in model space
-    // Rod is scaled by 0.5 in main.cpp
-    // So physical rod width = 16.2 * 0.5 = 8.1m
-    float rodModelWidth = 16.2f;                             // Rod's original model width
-    float rodScaleInMain = 0.5f;                             // Scale applied in main.cpp
-    float rodPhysicalWidth = rodModelWidth * rodScaleInMain; // 8.1m
+    float rodModelWidth = 16.2f;                             
+    float rodScaleInMain = 0.5f;
+    float rodPhysicalWidth = rodModelWidth * rodScaleInMain;
 
-    // Screen width should be 95% of the physical rod width
-    this->screenWidth = rodPhysicalWidth * 0.95f; // 7.695m - properly centered!
+    this->screenWidth = rodPhysicalWidth * 0.95f; 
 
-    // Green board dimensions for calculating drop height
     float boardHeight = roomHeight * 0.35f;
     float boardBottomY = roomHeight / 2.0f - boardHeight / 2.0f;
 
-    // Rod position - centered horizontally, above the boards
     float boardTopY = roomHeight / 2.0f + boardHeight / 2.0f;
-    this->rodY = boardTopY + 0.3f; // 30cm above boards
+    this->rodY = boardTopY + 0.3f;
 
-    // Screen drops to 0.5m BELOW the green board bottom
     float screenBottomY = boardBottomY - 0.5f;
     this->screenMaxHeight = this->rodY - screenBottomY;
 
-    // Z position - in front of the front wall
     float frontWallZ = roomWidth / 2.0f;
     this->screenZ = frontWallZ - 0.20f;
 
-    // Border dimensions (black borders on left, right, and bottom)
-    this->borderWidth = 0.10f; // 10cm black border
+    this->borderWidth = 0.10f; 
 
-    // Animation parameters
     this->isDroppedDown = false;
     this->screenExtension = 0.0f;
     this->targetExtension = 0.0f;
@@ -52,38 +40,30 @@ void ProjectorScreen::UpdateScreenGeometry()
     std::vector<GLfloat> screenVertices;
     std::vector<GLuint> screenIndices;
 
-    // Current screen height based on extension
     float currentHeight = screenMaxHeight * screenExtension;
 
-    // White screen color (matte white surface for projection area)
     float screenR = 0.95f, screenG = 0.95f, screenB = 0.95f;
 
-    // Black border color
     float borderR = 0.00f, borderG = 0.00f, borderB = 0.00f;
 
-    if (currentHeight > 0.01f) // Only create geometry if screen is visible
+    if (currentHeight > 0.01f) 
     {
-        // Overall screen dimensions (including borders)
         float totalWidth = screenWidth;
         float leftX = -totalWidth / 2.0f;
         float rightX = totalWidth / 2.0f;
         float topY = rodY;
         float bottomY = rodY - currentHeight;
 
-        // White projection area dimensions (inside the borders)
         float whiteLeftX = leftX + borderWidth;
         float whiteRightX = rightX - borderWidth;
-        float whiteTopY = topY; // No border on top (rolled from rod)
+        float whiteTopY = topY;
         float whiteBottomY = bottomY + borderWidth;
 
         float frontZ = screenZ;
-        float backZ = screenZ + 0.01f; // 1cm thickness
+        float backZ = screenZ + 0.01f; 
 
         unsigned int vertexIndex = 0;
 
-        // ===== FRONT FACE =====
-
-        // 1. White projection area (center)
         screenVertices.insert(screenVertices.end(), {whiteLeftX, whiteBottomY, frontZ, screenR, screenG, screenB, 0.0f, 0.0f, -1.0f});
         screenVertices.insert(screenVertices.end(), {whiteRightX, whiteBottomY, frontZ, screenR, screenG, screenB, 0.0f, 0.0f, -1.0f});
         screenVertices.insert(screenVertices.end(), {whiteRightX, whiteTopY, frontZ, screenR, screenG, screenB, 0.0f, 0.0f, -1.0f});
@@ -91,7 +71,6 @@ void ProjectorScreen::UpdateScreenGeometry()
         screenIndices.insert(screenIndices.end(), {0, 1, 2, 2, 3, 0});
         vertexIndex = 4;
 
-        // 2. Left black border
         screenVertices.insert(screenVertices.end(), {leftX, bottomY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
         screenVertices.insert(screenVertices.end(), {whiteLeftX, bottomY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
         screenVertices.insert(screenVertices.end(), {whiteLeftX, whiteTopY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
@@ -99,7 +78,6 @@ void ProjectorScreen::UpdateScreenGeometry()
         screenIndices.insert(screenIndices.end(), {4, 5, 6, 6, 7, 4});
         vertexIndex = 8;
 
-        // 3. Right black border
         screenVertices.insert(screenVertices.end(), {whiteRightX, bottomY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
         screenVertices.insert(screenVertices.end(), {rightX, bottomY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
         screenVertices.insert(screenVertices.end(), {rightX, whiteTopY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
@@ -107,7 +85,6 @@ void ProjectorScreen::UpdateScreenGeometry()
         screenIndices.insert(screenIndices.end(), {8, 9, 10, 10, 11, 8});
         vertexIndex = 12;
 
-        // 4. Bottom black border
         screenVertices.insert(screenVertices.end(), {leftX, bottomY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
         screenVertices.insert(screenVertices.end(), {rightX, bottomY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
         screenVertices.insert(screenVertices.end(), {rightX, whiteBottomY, frontZ, borderR, borderG, borderB, 0.0f, 0.0f, -1.0f});
@@ -115,7 +92,6 @@ void ProjectorScreen::UpdateScreenGeometry()
         screenIndices.insert(screenIndices.end(), {12, 13, 14, 14, 15, 12});
         vertexIndex = 16;
 
-        // ===== BACK FACE (simplified - slightly darker) =====
         float backR = 0.85f, backG = 0.85f, backB = 0.85f;
 
         screenVertices.insert(screenVertices.end(), {leftX, bottomY, backZ, backR, backG, backB, 0.0f, 0.0f, 1.0f});
@@ -125,34 +101,29 @@ void ProjectorScreen::UpdateScreenGeometry()
         screenIndices.insert(screenIndices.end(), {16, 18, 17, 18, 16, 19});
         vertexIndex = 20;
 
-        // ===== SIDE EDGES for thickness =====
-        // Left edge
         screenIndices.insert(screenIndices.end(), {4, 7, 19, 19, 16, 4});
-        // Right edge
+       
         screenIndices.insert(screenIndices.end(), {9, 17, 18, 18, 10, 9});
-        // Bottom edge
+      
         screenIndices.insert(screenIndices.end(), {12, 16, 17, 17, 13, 12});
-        // Top edge (at rod)
+        
         screenIndices.insert(screenIndices.end(), {7, 10, 18, 18, 19, 7});
     }
 
     numScreenIndices = screenIndices.size();
 
-    // Delete old buffers if they exist
     if (screenVBO)
     {
         screenVBO->Delete();
         delete screenVBO;
-        screenVBO = nullptr; // CRITICAL FIX: Set to nullptr after deletion
+        screenVBO = nullptr; 
     }
     if (screenEBO)
     {
         screenEBO->Delete();
         delete screenEBO;
-        screenEBO = nullptr; // CRITICAL FIX: Set to nullptr after deletion
+        screenEBO = nullptr; 
     }
-
-    // Create new buffers only if there's geometry
     if (numScreenIndices > 0)
     {
         screenVAO.Bind();
@@ -169,7 +140,6 @@ void ProjectorScreen::UpdateScreenGeometry()
 
 void ProjectorScreen::Update(float deltaTime)
 {
-    // Smoothly animate towards target extension
     if (std::abs(screenExtension - targetExtension) > 0.001f)
     {
         float step = animationSpeed * deltaTime;
@@ -187,7 +157,6 @@ void ProjectorScreen::Update(float deltaTime)
                 screenExtension = targetExtension;
         }
 
-        // Regenerate geometry with new extension
         UpdateScreenGeometry();
     }
 }
@@ -200,7 +169,6 @@ void ProjectorScreen::ToggleScreen()
 
 void ProjectorScreen::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection)
 {
-    // Only draw if screen is visible (extension > 0)
     if (screenExtension > 0.001f && numScreenIndices > 0)
     {
         shader.Activate();
@@ -208,7 +176,6 @@ void ProjectorScreen::Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm:
         glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
-        // Set transparency to fully opaque
         glUniform1f(glGetUniformLocation(shader.ID, "transparency"), 1.0f);
 
         screenVAO.Bind();

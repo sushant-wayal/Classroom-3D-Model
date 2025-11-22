@@ -15,8 +15,6 @@ void main()
 {
     FragPos = vec3(model * vec4(aPos, 1.0));
     
-    // Properly transform normals using the normal matrix
-    // This is crucial for maintaining smooth lighting during rotations
     Normal = normalize(mat3(transpose(inverse(model))) * aNormal);
     
     TexCoord = aTexCoord;

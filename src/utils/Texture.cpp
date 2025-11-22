@@ -11,17 +11,14 @@ Texture::Texture(const char *imagePath, GLenum texType, GLint wrap, GLint filter
 
 void Texture::loadTexture(const char *imagePath, GLenum texType, GLint wrap, GLint filter)
 {
-    // Generate texture
     glGenTextures(1, &ID);
     glBindTexture(texType, ID);
 
-    // Set texture parameters
     glTexParameteri(texType, GL_TEXTURE_WRAP_S, wrap);
     glTexParameteri(texType, GL_TEXTURE_WRAP_T, wrap);
     glTexParameteri(texType, GL_TEXTURE_MIN_FILTER, filter);
     glTexParameteri(texType, GL_TEXTURE_MAG_FILTER, filter);
 
-    // Load image
     stbi_set_flip_vertically_on_load(true);
     unsigned char *data = stbi_load(imagePath, &width, &height, &nrChannels, 0);
 
@@ -43,7 +40,7 @@ void Texture::loadTexture(const char *imagePath, GLenum texType, GLint wrap, GLi
     else
     {
         std::cout << "Failed to load texture: " << imagePath << std::endl;
-        // Create a default 1x1 white texture as fallback
+      
         unsigned char defaultData[] = {255, 255, 255, 255};
         glTexImage2D(texType, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, defaultData);
         width = height = 1;

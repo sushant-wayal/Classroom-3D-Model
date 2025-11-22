@@ -2,7 +2,7 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
 layout (location = 2) in vec3 aNormal;
-layout (location = 3) in float aAlpha;  // Add alpha channel
+layout (location = 3) in float aAlpha;  
 
 uniform mat4 model;
 uniform mat4 view;
@@ -11,7 +11,7 @@ uniform mat4 projection;
 out vec3 vertexColor;
 out vec3 Normal;
 out vec3 FragPos;
-out float vertexAlpha;  // Pass alpha to fragment shader
+out float vertexAlpha;  
 
 void main()
 {
@@ -19,5 +19,5 @@ void main()
    vertexColor = aColor;
    FragPos = vec3(model * vec4(aPos, 1.0));
    Normal = mat3(transpose(inverse(model))) * aNormal;
-   vertexAlpha = aAlpha;  // Pass through alpha
+   vertexAlpha = aAlpha;  
 }

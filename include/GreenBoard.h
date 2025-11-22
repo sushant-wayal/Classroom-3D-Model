@@ -16,7 +16,6 @@ class GreenBoard
 public:
     GreenBoard(float roomLength, float roomWidth, float roomHeight);
 
-    // Draw green boards with metallic frames
     void Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection);
 
     void Delete();

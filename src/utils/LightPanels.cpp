@@ -7,7 +7,6 @@ LightPanels::LightPanels(float roomLength, float roomWidth, float roomHeight, in
     lightVBO = nullptr;
     lightEBO = nullptr;
 
-    // Create dedicated emissive shader for self-glowing effect
     emissiveShader = new Shader("shaders/emissive.vert", "shaders/emissive.frag");
 
     generateLightPanels(roomLength, roomWidth, roomHeight, rows, cols, lightsPos, numLights);
@@ -16,15 +15,13 @@ LightPanels::LightPanels(float roomLength, float roomWidth, float roomHeight, in
 
 void LightPanels::generateLightPanels(float roomLength, float roomWidth, float roomHeight, int rows, int cols, LightPanelPositions lightsPos[], int numLights)
 {
-    // Clear any existing data
+    
     vertices.clear();
     indices.clear();
 
-    // Calculate tile dimensions
     float tileWidth = roomLength / cols;
     float tileHeight = roomWidth / rows;
 
-    // Generate light panels based on provided positions
     for (int i = 0; i < numLights; i++) {
         int lightRow = lightsPos[i].rows;
         int lightCol = lightsPos[i].cols;
@@ -39,18 +36,13 @@ void LightPanels::addLightPanel(glm::vec3 center, float panelWidth, float panelH
 {
     unsigned int baseIndex = vertices.size();
 
-    // VERY BRIGHT glowing color - pure white with slight warmth
-    glm::vec3 glowColor = glm::vec3(2.5f, 2.5f, 2.3f); // Extra bright (>1.0) for emissive glow
+    glm::vec3 glowColor = glm::vec3(2.5f, 2.5f, 2.3f); 
 
-    // Panel dimensions - cover almost the entire tile
-    float halfWidth = (panelWidth * 0.92f) * 0.5f;   // 92% of tile width
-    float halfHeight = (panelHeight * 0.92f) * 0.5f; // 92% of tile height
+    float halfWidth = (panelWidth * 0.92f) * 0.5f;   
+    float halfHeight = (panelHeight * 0.92f) * 0.5f; 
 
-    // Position just slightly below ceiling level
-    float panelY = ceilingHeight - 0.015f; // 1.5cm below ceiling
+    float panelY = ceilingHeight - 0.015f; 
 
-    // Create a bright glowing rectangular panel (facing down)
-    // Bottom face (visible from below - this is the glowing surface)
     vertices.push_back({glm::vec3(center.x - halfWidth, panelY, center.z - halfHeight),
                         glowColor, glm::vec3(0.0f, -1.0f, 0.0f)});
     vertices.push_back({glm::vec3(center.x + halfWidth, panelY, center.z - halfHeight),
@@ -60,7 +52,6 @@ void LightPanels::addLightPanel(glm::vec3 center, float panelWidth, float panelH
     vertices.push_back({glm::vec3(center.x - halfWidth, panelY, center.z + halfHeight),
                         glowColor, glm::vec3(0.0f, -1.0f, 0.0f)});
 
-    // Create indices for the rectangular panel
     indices.push_back(baseIndex + 0);
     indices.push_back(baseIndex + 1);
     indices.push_back(baseIndex + 2);
@@ -76,11 +67,9 @@ void LightPanels::setupLightPanels()
     lightVBO = new VBO((GLfloat *)vertices.data(), vertices.size() * sizeof(LightVertex));
     lightEBO = new EBO(indices.data(), indices.size() * sizeof(unsigned int));
 
-    // Position attribute (location = 0)
     lightVAO.LinkVBOAttrib(*lightVBO, 0, 3, GL_FLOAT, sizeof(LightVertex), (void *)0);
-    // Color attribute (location = 1)
+
     lightVAO.LinkVBOAttrib(*lightVBO, 1, 3, GL_FLOAT, sizeof(LightVertex), (void *)(offsetof(LightVertex, Color)));
-    // Normal attribute (location = 2)
     lightVAO.LinkVBOAttrib(*lightVBO, 2, 3, GL_FLOAT, sizeof(LightVertex), (void *)(offsetof(LightVertex, Normal)));
 
     lightVAO.Unbind();
@@ -90,7 +79,6 @@ void LightPanels::setupLightPanels()
 
 void LightPanels::Draw(glm::mat4 model, glm::mat4 view, glm::mat4 projection)
 {
-    // Use emissive shader for self-glowing effect
     emissiveShader->Activate();
 
     glUniformMatrix4fv(glGetUniformLocation(emissiveShader->ID, "model"), 1, GL_FALSE, glm::value_ptr(model));

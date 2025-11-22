@@ -29,11 +29,11 @@ public:
     std::vector<LightVertex> vertices;
     std::vector<unsigned int> indices;
     VAO lightVAO;
-    Shader *emissiveShader; // Dedicated shader for glowing effect
+    Shader *emissiveShader; 
 
     LightPanels(float roomLength, float roomWidth, float roomHeight, int rows, int cols, LightPanelPositions lightsPos[], int numLights);
 
-    void Draw(glm::mat4 model, glm::mat4 view, glm::mat4 projection); // No shader parameter
+    void Draw(glm::mat4 model, glm::mat4 view, glm::mat4 projection); 
     void Delete();
 
 private:

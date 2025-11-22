@@ -16,7 +16,6 @@ class Door
 public:
     Door(float roomLength, float roomWidth, float roomHeight);
 
-    // Draw door with frame and panel
     void Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection);
 
     void Delete();

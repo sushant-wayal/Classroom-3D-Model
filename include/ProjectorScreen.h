@@ -16,13 +16,12 @@ class ProjectorScreen
 public:
     ProjectorScreen(float roomLength, float roomWidth, float roomHeight);
     void Draw(Shader &shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection);
-    void Update(float deltaTime); // Update animation
-    void ToggleScreen();          // Toggle between rolled up and dropped down
+    void Update(float deltaTime); 
+    void ToggleScreen();          
     void Delete();
 
-    // Animation state
     bool isDroppedDown;
-    float screenExtension; // How far the screen has extended (0.0 to 1.0)
+    float screenExtension; 
 
 private:
     VAO screenVAO;
@@ -31,15 +30,13 @@ private:
 
     unsigned int numScreenIndices;
 
-    float screenWidth;     // Width of the screen
-    float screenMaxHeight; // Maximum height when fully dropped
-    float rodY;            // Y position of the rod
-    float screenZ;         // Z position on front wall
-    float borderWidth;     // Width of black borders on left, right, and bottom
+    float screenWidth;     
+    float screenMaxHeight; 
+    float rodY;           
+    float screenZ;         
+    float borderWidth;     
+    float animationSpeed;  
+    float targetExtension; 
 
-    // Animation parameters
-    float animationSpeed;  // Speed of animation
-    float targetExtension; // Target extension (0.0 or 1.0)
-
-    void UpdateScreenGeometry(); // Regenerate screen geometry based on current extension
+    void UpdateScreenGeometry(); 
 };

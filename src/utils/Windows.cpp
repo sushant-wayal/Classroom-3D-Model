@@ -70,8 +70,7 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
         float frameOuterBottomY = windowBottomY - frameThickness;
         float frameOuterTopY = windowTopY + frameThickness;
 
-        // Inner edge (at back of frame) - SMALLER to create inward slope
-        float bevelAmount = frameThickness * 0.6f; // 60% of frame thickness slopes inward
+        float bevelAmount = frameThickness * 0.6f; 
         float frameInnerLeftX = windowLeftX + bevelAmount;
         float frameInnerRightX = windowRightX - bevelAmount;
         float frameInnerBottomY = windowBottomY + bevelAmount;
@@ -81,18 +80,16 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
         unsigned int frameBaseIndex = frameVertices.size() / 9;
         float backZ = backWallZ + frameDepth;
 
-        // Front face - outer rectangle (at wall surface)
         frameVertices.insert(frameVertices.end(), {frameOuterLeftX, frameOuterBottomY, backWallZ, frameR, frameG, frameB, 0.0f, 0.0f, 1.0f,
                                                    frameOuterRightX, frameOuterBottomY, backWallZ, frameR, frameG, frameB, 0.0f, 0.0f, 1.0f,
                                                    frameOuterRightX, frameOuterTopY, backWallZ, frameR, frameG, frameB, 0.0f, 0.0f, 1.0f,
                                                    frameOuterLeftX, frameOuterTopY, backWallZ, frameR, frameG, frameB, 0.0f, 0.0f, 1.0f,
-                                                   // Inner rectangle at front (glass opening edge)
+                                                   
                                                    frameInnerLeftX, frameInnerBottomY, backWallZ, frameR, frameG, frameB, 0.0f, 0.0f, 1.0f,
                                                    frameInnerRightX, frameInnerBottomY, backWallZ, frameR, frameG, frameB, 0.0f, 0.0f, 1.0f,
                                                    frameInnerRightX, frameInnerTopY, backWallZ, frameR, frameG, frameB, 0.0f, 0.0f, 1.0f,
                                                    frameInnerLeftX, frameInnerTopY, backWallZ, frameR, frameG, frameB, 0.0f, 0.0f, 1.0f});
 
-        // Front face frame (4 beveled strips)
         frameIndices.insert(frameIndices.end(), {
                                                     frameBaseIndex + 0, frameBaseIndex + 1, frameBaseIndex + 5, frameBaseIndex + 5, frameBaseIndex + 4, frameBaseIndex + 0, // Bottom
                                                     frameBaseIndex + 1, frameBaseIndex + 2, frameBaseIndex + 6, frameBaseIndex + 6, frameBaseIndex + 5, frameBaseIndex + 1, // Right
@@ -100,7 +97,6 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
                                                     frameBaseIndex + 3, frameBaseIndex + 0, frameBaseIndex + 4, frameBaseIndex + 4, frameBaseIndex + 7, frameBaseIndex + 3  // Left
                                                 });
 
-        // Back face - same structure but at backZ (also beveled)
         unsigned int backFaceIndex = frameVertices.size() / 9;
         frameVertices.insert(frameVertices.end(), {frameOuterLeftX, frameOuterBottomY, backZ, frameR, frameG, frameB, 0.0f, 0.0f, -1.0f,
                                                    frameOuterRightX, frameOuterBottomY, backZ, frameR, frameG, frameB, 0.0f, 0.0f, -1.0f,
@@ -116,9 +112,8 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
                                                  backFaceIndex + 2, backFaceIndex + 6, backFaceIndex + 7, backFaceIndex + 7, backFaceIndex + 3, backFaceIndex + 2,
                                                  backFaceIndex + 3, backFaceIndex + 7, backFaceIndex + 4, backFaceIndex + 4, backFaceIndex + 0, backFaceIndex + 3});
 
-        // OUTER SIDES (4 sides - connecting outer edges)
         unsigned int sideIdx = frameVertices.size() / 9;
-        // Bottom outer
+       
         frameVertices.insert(frameVertices.end(), {frameOuterLeftX, frameOuterBottomY, backWallZ, frameR, frameG, frameB, 0.0f, -1.0f, 0.0f,
                                                    frameOuterRightX, frameOuterBottomY, backWallZ, frameR, frameG, frameB, 0.0f, -1.0f, 0.0f,
                                                    frameOuterRightX, frameOuterBottomY, backZ, frameR, frameG, frameB, 0.0f, -1.0f, 0.0f,
@@ -126,7 +121,7 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
         frameIndices.insert(frameIndices.end(), {sideIdx + 0, sideIdx + 1, sideIdx + 2, sideIdx + 2, sideIdx + 3, sideIdx + 0});
 
         sideIdx = frameVertices.size() / 9;
-        // Right outer
+      
         frameVertices.insert(frameVertices.end(), {frameOuterRightX, frameOuterBottomY, backWallZ, frameR, frameG, frameB, 1.0f, 0.0f, 0.0f,
                                                    frameOuterRightX, frameOuterTopY, backWallZ, frameR, frameG, frameB, 1.0f, 0.0f, 0.0f,
                                                    frameOuterRightX, frameOuterTopY, backZ, frameR, frameG, frameB, 1.0f, 0.0f, 0.0f,
@@ -134,7 +129,7 @@ Windows::Windows(float roomLength, float roomWidth, float roomHeight, int numWin
         frameIndices.insert(frameIndices.end(), {sideIdx + 0, sideIdx + 1, sideIdx + 2, sideIdx + 2, sideIdx + 3, sideIdx + 0});
 
         sideIdx = frameVertices.size() / 9;
-        // Top outer
+        
         frameVertices.insert(frameVertices.end(), {frameOuterLeftX, frameOuterTopY, backWallZ, frameR, frameG, frameB, 0.0f, 1.0f, 0.0f,
                                                    frameOuterRightX, frameOuterTopY, backWallZ, frameR, frameG, frameB, 0.0f, 1.0f, 0.0f,
                                                    frameOuterRightX, frameOuterTopY, backZ, frameR, frameG, frameB, 0.0f, 1.0f, 0.0f,
